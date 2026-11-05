@@ -1,0 +1,1659 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>플레이트 로그</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-title" content="플레이트 로그">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EEF0EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111315" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: 한 손 조작용 세로 로그북 — 위 날짜·탭, 가운데 카드, 아래 고정 휴식 바와 키패드. 요일 색은 원판 색(25kg 빨강·20kg 파랑·10kg 초록·15kg 노랑) */
+:root{
+  --bg:#EEF0EC;--surface:#FFFFFF;--sunk:#E4E7E2;--ink:#15181B;--muted:#5A6168;--line:#D5D9D3;
+  --red:#C3302A;--blue:#1E5CB8;--green:#2A8452;--yellow:#B98A00;--plate5:#3A3F44;--onacc:#FFFFFF;--warn-bg:#FFF4D6;--warn:#7A5600;
+  --accent:var(--red);
+  --f-disp:"Barlow Condensed","Arial Narrow","IBM Plex Sans KR",sans-serif;
+  --f-body:"IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111315;--surface:#1A1D20;--sunk:#23272B;--ink:#ECEDEA;--muted:#9BA1A7;--line:#2D3237;
+  --red:#E5574E;--blue:#5D91E8;--green:#4DB47D;--yellow:#E3B53A;--plate5:#C9CDD1;--onacc:#111315;--warn-bg:#3A2F12;--warn:#F2D27A;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111315;--surface:#1A1D20;--sunk:#23272B;--ink:#ECEDEA;--muted:#9BA1A7;--line:#2D3237;
+  --red:#E5574E;--blue:#5D91E8;--green:#4DB47D;--yellow:#E3B53A;--plate5:#C9CDD1;--onacc:#111315;--warn-bg:#3A2F12;--warn:#F2D27A;color-scheme:dark}
+body[data-plate="red"]{--accent:var(--red)}body[data-plate="blue"]{--accent:var(--blue)}
+body[data-plate="green"]{--accent:var(--green)}body[data-plate="yellow"]{--accent:var(--yellow)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;word-break:keep-all;overflow-wrap:break-word;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 120px}
+body.kp-open{padding-bottom:420px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.view{display:flex;flex-direction:column;gap:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--ink)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--f-disp);font-weight:700;font-size:26px;letter-spacing:.04em;line-height:1}
+.brand b{color:var(--accent)}
+#date{font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--sunk);border-radius:10px;padding:3px}
+.tabs button{border:0;background:none;padding:8px 4px;border-radius:8px;font-weight:500;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.days button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 0 7px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px}
+.days i{width:10px;height:10px;border-radius:50%;display:block}
+.days button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.days button.today span{font-weight:600}
+.dayhead{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:2px;border-left:6px solid var(--accent);padding-left:10px}
+.dayhead h2{font-family:var(--f-disp);font-weight:700;font-size:30px;margin:0;line-height:1.05;white-space:nowrap}
+.dayhead p{margin:0;color:var(--muted);font-size:13px}
+.banner{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+.banner span{flex:1}
+.banner button{border:1px solid currentColor;background:none;color:inherit;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+.ex{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.ex.done{border-color:var(--accent)}
+.ex header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ex h3{margin:0;font-size:17px;font-weight:600}
+.ex.done h3::after{content:" ✓";color:var(--accent)}
+.tgt{font-family:var(--f-disp);font-weight:600;font-size:17px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--muted);margin:0}
+.last{font-size:13px;color:var(--muted);margin:0;font-variant-numeric:tabular-nums}
+.last b{color:var(--ink);font-weight:500}
+.sug{align-self:flex-start;border:0;background:var(--accent);color:var(--onacc);font-weight:600;font-size:13px;padding:5px 10px;border-radius:999px}
+.sets{display:flex;flex-direction:column;gap:6px}
+.setadj{display:flex;gap:8px}
+.set{display:grid;grid-template-columns:34px 1fr auto 1fr 46px;align-items:center;gap:6px}
+.set.hold{grid-template-columns:34px 1fr 64px 46px}
+.set.reps{grid-template-columns:34px 1fr 46px}
+.set .n{font-family:var(--f-disp);font-weight:600;font-size:17px;color:var(--muted);text-align:center}
+.set .x{color:var(--muted)}
+.cell{position:relative;width:100%;min-width:0;height:40px;font-size:17px;font-variant-numeric:tabular-nums;text-align:center;background:var(--sunk);border:1.5px solid transparent;border-radius:8px;padding:0 22px 0 4px}
+.cell .ph{color:var(--muted);opacity:.7}
+.cell .u{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted)}
+.cell.editing{border-color:var(--accent);background:var(--surface)}
+.cell.fresh .v{background:var(--accent);color:var(--onacc);padding:0 3px;border-radius:3px}
+.ck{height:40px;border-radius:10px;border:1.5px solid var(--line);background:none;font-size:18px;color:var(--muted)}
+.set.ok .ck{background:var(--accent);border-color:var(--accent);color:var(--onacc)}
+.set.ok .cell{background:none;border-color:var(--line)}
+.play{height:40px;border-radius:10px;border:0;background:var(--ink);color:var(--surface);font-weight:600;font-size:14px}
+.plates{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.pl{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:22px;padding:0 6px;border-radius:5px;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;color:var(--onacc);background:var(--plate5)}
+.pl[data-p="25"]{background:var(--red)}.pl[data-p="20"]{background:var(--blue)}.pl[data-p="15"]{background:var(--yellow);color:#1d1600}.pl[data-p="10"]{background:var(--green)}
+.pl.sm{background:none;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.big{flex:1;min-width:140px;height:46px;border-radius:12px;border:0;background:var(--ink);color:var(--surface);font-weight:600}
+/* 세로로 쌓이는 화면 안에 바로 놓인 큰 버튼(운동 끝의 '기록 저장')은 flex:1 때문에 높이가 글자 높이로 줄어들어서 막음 */
+.view>.big{flex:none}
+.ghost{height:46px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:none;font-weight:500}
+.ghost.ok{background:var(--accent);border-color:var(--accent);color:var(--onacc)}
+.ghost.sm{height:36px;padding:0 12px;border-radius:9px;font-size:14px}
+.ghost.danger{border-color:var(--red);color:var(--red)}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--sunk);border-radius:8px;padding:2px}
+/* 칩·작은 버튼은 손가락으로 누르기 쉽게 32~34px 이상 */
+.seg button{border:0;background:none;padding:6px 14px;min-height:34px;border-radius:6px;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:600}
+.flow{margin:0;padding-left:20px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.restchip{align-self:flex-start;border:1px solid var(--line);background:none;border-radius:999px;padding:6px 12px;min-height:32px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.restchip.custom{border-color:var(--accent);color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.clipchip{border:1px solid var(--line);background:none;border-radius:999px;padding:6px 12px;min-height:32px;font-size:13px;color:var(--muted)}
+.clipchip.on{color:var(--ink);border-color:var(--ink)}
+.clip{display:flex;flex-direction:column;gap:6px}
+.clipbox{position:relative;aspect-ratio:4/3;max-width:100%;overflow:hidden;border-radius:10px;background:#0E0F10}
+.clipbox video,.clipbox img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:translateY(var(--y)) scale(var(--z));transform-origin:center}
+.cliptools{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.cliptools button{min-width:34px;height:32px;border:1px solid var(--line);background:none;border-radius:8px;font-size:13px;padding:0 8px}
+.cliptools .sp{flex:1}
+.cliptools .del.arm{background:var(--red);border-color:var(--red);color:#fff}
+.restedit{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--sunk);border-radius:10px;padding:6px 8px;font-size:13px}
+.restedit span{color:var(--muted)}
+.restedit b{font-family:var(--f-disp);font-size:20px;font-weight:700;min-width:48px;text-align:center;font-variant-numeric:tabular-nums}
+.restedit button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;min-height:34px;font-size:13px}
+.restedit.fedit{display:grid;grid-template-columns:auto 40px 34px 40px 1fr;row-gap:6px;column-gap:6px}
+.restedit.fedit b{min-width:0}
+.restedit.fedit .fl{grid-column:1/-1;font-weight:600;color:var(--ink)}
+.restedit.fedit .okb{grid-column:5;grid-row:2/4;align-self:stretch;margin-left:0;justify-self:end;padding:0 16px}
+.restedit .okb{margin-left:auto;background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.today-btn{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.lastwarn{font-size:13px;margin:0;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:4px 8px;align-self:flex-start}
+.summ .kv b{font-size:22px}
+.summ .prs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px;font-variant-numeric:tabular-nums}
+.summ .prs li::before{content:"▲ ";color:var(--green)}
+#toast{pointer-events:none;position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--surface);border-radius:12px;padding:10px 16px;font-weight:600;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.18);max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){#toast{animation:tin .25s ease-out}@keyframes tin{from{opacity:0;transform:translate(-50%,-8px)}}}
+/* 휴식 끝·라운드 시작 알림: 화면 전체를 루틴 색으로 세 번 깜빡임 (움직임 줄이기 설정이면 한 번만 옅게) */
+#flash{position:fixed;inset:0;z-index:40;pointer-events:none;background:var(--accent);opacity:0}
+#flash.on{animation:flash3 1.5s ease-out}
+@keyframes flash3{0%,34%,68%{opacity:.5}17%,51%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#flash.on{animation:flash1 1.2s ease-out}@keyframes flash1{0%{opacity:.3}100%{opacity:0}}}
+.memo .q{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
+.memo .q small{color:var(--muted);font-size:12px}
+.scale{display:inline-grid;grid-template-columns:repeat(5,36px);gap:4px}
+.scale button{height:34px;border-radius:8px;border:1px solid var(--line);background:none;font-variant-numeric:tabular-nums}
+.scale button.on{background:var(--accent);border-color:var(--accent);color:var(--onacc);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:none;border-radius:999px;padding:4px 12px;font-size:13px}
+.chips button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+textarea{width:100%;min-height:64px;font-size:14px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+textarea.code{font:12px/1.4 ui-monospace,Menlo,monospace;min-height:100px}
+.rest-day{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel h3{margin:0;font-size:16px}
+.panel p{margin:0;font-size:13px;color:var(--muted)}
+.msg{font-size:13px;color:var(--accent);min-height:1.2em}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .h{font-size:11px;color:var(--muted);text-align:center}
+.cal button{aspect-ratio:1;max-width:100%;border:0;border-radius:7px;background:var(--sunk);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;padding:0;position:relative}
+.cal button.did{background:var(--c);color:#fff;font-weight:600}
+.cal button.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal button.fut{opacity:.35}
+.cal button i{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--red)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.hcard{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:12px;padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:4px;width:100%}
+.hcard .d{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.hcard .d span{font-weight:400;color:var(--muted);font-size:13px}
+.hcard ul{margin:0;padding:0;list-style:none;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hcard .mm{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:24px 10px}
+.d100{display:flex;align-items:baseline;gap:10px}
+.d100 b{font-family:var(--f-disp);font-size:52px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}
+.d100 span{color:var(--muted);font-size:14px}
+.bar{height:10px;background:var(--sunk);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kv div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.kv small{display:block;color:var(--muted);font-size:12px}
+.kv b{font-family:var(--f-disp);font-size:24px;font-variant-numeric:tabular-nums}
+.chg{margin:0;padding:0;list-style:none;font-size:14px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.chg li{display:flex;justify-content:space-between;gap:8px}
+.chg em{font-style:normal;color:var(--green);font-weight:600}
+.chg em.dn{color:var(--red)}
+.picker{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.picker button{flex:none;border:1px solid var(--line);background:none;border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap}
+.picker button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ax{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart .s1{stroke:var(--ink);stroke-width:2;fill:none}
+.chart .s2{stroke:var(--red);stroke-width:2;fill:none;stroke-dasharray:5 4}
+.chart .p1{fill:var(--ink);stroke:var(--surface);stroke-width:2}
+.chart .p2{fill:var(--red);stroke:var(--surface);stroke-width:2}
+.chart .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;border-radius:8px;padding:6px 8px;white-space:nowrap;transform:translate(-50%,-100%);font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{text-align:left;padding:5px 4px;border-bottom:1px solid var(--line)}
+.tbl th{color:var(--muted);font-weight:500}
+.edlist{display:flex;flex-direction:column;gap:6px}
+.edrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.edrow b{font-weight:600;font-size:14px}
+.edrow small{display:block;color:var(--muted);font-size:12px}
+.edrow .acts{display:flex;gap:4px}
+.edrow .acts button{width:34px;height:34px;border:1px solid var(--line);background:none;border-radius:8px;font-size:14px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:var(--sunk);border-radius:12px;padding:10px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.form label.w2{grid-column:span 2}
+.form input,.form select{width:100%;min-width:0;font-size:15px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+.form .cb{flex-direction:row;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
+.form .cb input{width:auto}
+/* 요일마다 '월 [근력 ▾]' 한 줄. 7칸 한 줄로 두면 휴대폰에서 루틴 이름이 한두 글자만 보임 */
+.dmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 10px}
+.dmap label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.dmap select{flex:1;width:auto;min-width:0;font-size:14px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+#rest{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink);color:var(--surface);touch-action:none;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+/* 위로 밀거나 시간을 누르면 크게 보기 */
+#rest .grab{position:absolute;top:4px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:currentColor;opacity:.35}
+#rest .open{flex:1;display:flex;flex-direction:column;min-width:0;border:0;padding:0;border-radius:0;opacity:1;text-align:left}
+#rest .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px}
+#rest .lbl{font-size:12px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rest .t{font-family:var(--f-disp);font-weight:700;font-size:34px;font-variant-numeric:tabular-nums;line-height:1;flex:1;white-space:nowrap}
+#rest button{border:1px solid currentColor;background:none;color:inherit;border-radius:10px;padding:8px 12px;font-size:14px;opacity:.9;white-space:nowrap}
+/* 버튼이 셋이라 좁은 화면에서는 여백을 줄여 남은 시간이 한 줄에 들어가게 함 */
+@media (max-width:380px){#rest .in{gap:6px}#rest button{padding:8px 9px;font-size:13px}}
+#rest.zero .t{color:var(--accent)}
+body.kp-open #rest{display:none}
+/* 휴식 크게 보기: 버티기·시간 타이머처럼 남은 시간만큼 원이 줄어듦. 아래로 밀면 작은 바(#rest)로 내려감 */
+#restbig{position:fixed;inset:0;z-index:28;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  touch-action:none;-webkit-user-select:none;user-select:none;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#restbig.away{transform:translateY(100%)}
+@media (prefers-reduced-motion:no-preference){#restbig{transition:transform .22s ease-out}}
+#restbig.drag{transition:none}
+#restbig .lb{font-size:12px;letter-spacing:.12em;color:var(--muted)}
+#restbig .ttl{font-weight:600;font-size:18px;text-align:center;margin-top:-12px}
+#restbig .sub{color:var(--muted);font-size:14px;text-align:center;min-height:1.4em}
+#restbig .row{justify-content:center;width:100%;max-width:340px}
+#restbig .row .ghost{flex:1;padding:0 8px}
+.rb-grab{position:absolute;top:calc(4px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:120px;height:40px;border:0;background:none;display:flex;align-items:center;justify-content:center}
+.rb-grab i{display:block;width:44px;height:5px;border-radius:3px;background:var(--line)}
+.rb-hint{margin:0;font-size:12px;color:var(--muted)}
+body.rest-big #rest{display:none}
+#kp{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(12px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+#kp .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.kp-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kp-head b{font-size:14px}
+.kp-head small{display:block;color:var(--muted);font-size:12px}
+.kp-val{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.kp-val .num{font-family:var(--f-disp);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.kp-val .num.fresh{color:var(--accent)}
+.kp-val .rt{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.kp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.kp-grid button{height:50px;border:0;border-radius:10px;background:var(--sunk);font-size:21px;font-variant-numeric:tabular-nums}
+.kp-grid button.op{font-size:16px;color:var(--muted)}
+.kp-grid button.okk{grid-column:span 2;background:var(--accent);color:var(--onacc);font-size:22px}
+.kp-grid button:disabled{opacity:.25}
+#v3d{position:fixed;inset:0;z-index:35;background:var(--bg);display:flex;flex-direction:column;gap:10px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.v3-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.v3-top small{display:block;font-size:11px;letter-spacing:.12em;color:var(--muted);font-variant-numeric:tabular-nums}
+.v3-top b{font-family:var(--f-disp);font-size:28px;line-height:1.1}
+.v3-top button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:16px;flex:none}
+.v3-stage{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;background:var(--sunk);touch-action:none}
+.v3-stage canvas{display:block;width:100%!important;height:100%!important}
+.v3-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);font-size:14px}
+.v3-hint{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--muted);pointer-events:none}
+.v3-desc{margin:0;font-size:14px;color:var(--muted);min-height:2.6em}
+.v3-legend{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.v3-legend i{width:10px;height:10px;border-radius:50%;background:#EE8976;display:inline-block}
+.v3-ctl{display:flex;flex-direction:column;gap:8px}
+.v3-ctl .row{flex-wrap:nowrap}
+.v3-ctl .ghost{flex:1;padding:0 8px}
+.flow li{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.flow .d3{border:1px solid var(--line);background:none;border-radius:8px;font-size:12px;padding:4px 10px;min-height:30px;min-width:42px;color:var(--ink);flex:none}
+#ov{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+#ov .ttl{font-weight:600;font-size:18px;text-align:center}
+#ov .sub{color:var(--muted);font-size:14px;text-align:center;min-height:1.4em}
+.dial{position:relative;width:min(72vw,280px);aspect-ratio:1;max-width:100%}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-disp);font-weight:700;font-size:min(22vw,92px);font-variant-numeric:tabular-nums}
+.dial.count .num{color:var(--accent)}
+#ov .row{justify-content:center;width:100%;max-width:340px}
+@media (prefers-reduced-motion:no-preference){.dial circle{transition:stroke-dashoffset .25s linear}}
+/* 가로 화면처럼 낮은 화면에서는 원을 줄여 버튼까지 한 화면에 들어가게 함 */
+@media (max-height:540px){.dial{width:min(40vh,280px)}.dial .num{font-size:min(22vw,13vh)}#ov,#restbig{gap:10px}#restbig .ttl{margin-top:-6px}.rb-hint{display:none}}
+</style>
+<style>
+/* v4: 흐름형 화면 */
+input[type="checkbox"]{accent-color:var(--accent);width:20px;height:20px;flex:none}
+.view.sub{gap:12px}
+.appbar{display:flex;align-items:center;gap:10px;min-width:0}
+.appbar .back{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px}
+.appbar .ttl{flex:1;min-width:0}
+.appbar .ttl b{display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .ttl small{display:block;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.appbar .act{flex:none}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.tag i{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.resume{display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--surface);border-radius:14px;padding:12px 14px}
+.resume div{flex:1;min-width:0}
+.resume b{display:block;font-size:15px}
+.resume small{opacity:.75;font-size:12px;font-variant-numeric:tabular-nums}
+.resume button{border:0;background:var(--accent);color:var(--onacc);border-radius:10px;padding:9px 14px;font-weight:600;white-space:nowrap}
+.prcard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.prcard .ic{width:40px;height:40px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.prcard div{flex:1;min-width:0}
+.prcard small{display:block;color:var(--muted);font-size:12px}
+.prcard b{display:block;font-size:15px}
+.prcard em{font-style:normal;color:var(--green);font-weight:600}
+.prcard .x{border:0;background:none;color:var(--muted);font-size:18px;width:32px;height:32px;flex:none}
+.reco{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.reco small{color:var(--muted);font-size:12px;letter-spacing:.04em}
+.reco h2{margin:0;font-family:var(--f-disp);font-size:30px;line-height:1.05}
+.reco p{margin:0;font-size:13px;color:var(--muted)}
+.reco .big{flex:none;height:46px;border-radius:12px;margin-top:4px}
+.sech{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 -4px}
+.sech h3{margin:0;font-size:18px}
+.rlist{display:flex;flex-direction:column;gap:8px}
+.rrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.rrow .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.rrow b{display:block;font-size:15px}
+.rrow small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow>div{min-width:0}
+.rrow button{border:1px solid var(--ink);background:none;border-radius:9px;padding:7px 12px;font-weight:600;font-size:14px}
+.dockbar{position:fixed;left:0;right:0;bottom:0;z-index:18;background:linear-gradient(to top,var(--bg) 70%,transparent);
+  padding:14px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dockbar .in{max-width:560px;margin:0 auto;display:flex;gap:10px}
+.dockbar .big{height:52px;border-radius:14px;font-size:16px}
+.dockbar .free{background:var(--accent);color:var(--onacc)}
+.dockbar .addr{height:52px;flex:1;border-radius:14px;background:var(--surface)}
+body.kp-open .dockbar,body.resting .dockbar{display:none}
+/* 휴식 중 운동 준비 화면에서도 '운동 이어가기'를 누를 수 있게 휴식 바 위로 올림 */
+body.resting:not(.kp-open) #planbar{display:block;bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+/* iOS Safari는 16px보다 작은 입력칸을 누르면 화면을 확대하고 돌아오지 않음 */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]):not(.pname),select,textarea,textarea.code{font-size:16px}}
+/* 빠르게 연달아 눌러도 두 번 탭 확대가 되지 않게 */
+button{touch-action:manipulation}
+.pname{width:100%;font-size:18px;font-weight:600;background:none;border:0;border-bottom:1.5px dashed var(--line);padding:4px 0;color:var(--ink);min-width:0}
+.pname:focus{outline:none;border-bottom-color:var(--accent)}
+.plist{display:flex;flex-direction:column;gap:8px}
+.pitem{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 12px}
+.pitem.cur{border-color:var(--accent)}
+.pitem .no{font-family:var(--f-disp);font-weight:700;font-size:20px;color:var(--muted);text-align:center}
+.pitem.done .no{color:var(--accent)}
+.pitem>div{min-width:0}
+.pitem b{display:block;font-size:15px}
+.pitem small{display:block;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.pitem .acts{display:flex;gap:4px}
+.pitem .acts button{width:34px;height:34px;border:1px solid var(--line);background:none;border-radius:8px;font-size:14px}
+.pitem .acts button:disabled{opacity:.3}
+.pitem .acts .del.arm{background:var(--red);border-color:var(--red);color:#fff;width:auto;padding:0 8px;font-size:12px}
+.pitem .form{grid-column:1/-1;margin-top:4px}
+/* 긴 종목 이름이 오른쪽 버튼 4개에 밀려 끊기지 않게: 이름은 윗줄 전체, 설명과 버튼은 아랫줄 */
+.pitem>div:not(.acts):not(.form),.edrow>div:not(.acts){display:contents}
+.pitem{grid-template-columns:28px minmax(0,1fr) auto;row-gap:2px}
+.pitem .no{grid-row:1/3}.pitem b{grid-column:2/4;min-width:0}.pitem small{grid-column:2;grid-row:2;min-width:0}.pitem .acts{grid-column:3;grid-row:2}.pitem .form{grid-row:3}
+.edrow{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+.edrow b{grid-column:1/3;min-width:0}.edrow small{grid-column:1;grid-row:2;min-width:0}.edrow .acts{grid-column:2;grid-row:2}
+/* 백업 불러오기의 파일 고르기: 브라우저 기본 버튼 대신 앱 버튼 모양. 실제 입력칸을 버튼 위에 투명하게 덮어 iOS에서도 바로 열림 */
+.filepick{position:relative;display:inline-flex;align-items:center;cursor:pointer}
+.filepick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.filepick:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.loadrow{display:flex;flex-wrap:wrap;gap:6px}
+.loadrow button{border:1px dashed var(--line);background:none;border-radius:999px;padding:6px 12px;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.loadrow button i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.empty2{border:1.5px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;color:var(--muted);font-size:14px}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.sheet .q{width:100%;font-size:15px;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+.libg h4{margin:4px 0 4px;font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.libg h4 i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.libitem{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:9px 2px;text-align:left}
+.libitem span{min-width:0}
+.libitem b{font-weight:500;font-size:15px}
+.libitem small{display:block;font-size:12px;color:var(--muted)}
+.libitem em{font-style:normal;font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
+.runhead{position:sticky;top:env(safe-area-inset-top,0px);z-index:12;background:var(--bg);padding-block:6px;display:flex;flex-direction:column;gap:8px}
+.prog{height:6px;background:var(--sunk);border-radius:999px;overflow:hidden;display:flex;gap:2px}
+.prog i{flex:1;background:var(--line)}
+.prog i.d{background:var(--accent)}
+.prog i.c{background:var(--ink)}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pager button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-size:14px;min-width:0}
+.pager button:disabled{opacity:.35}
+.pager span{font-size:13px;color:var(--muted);text-align:center;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elapsed{font-family:var(--f-disp);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.endbtn{border:1px solid var(--ink);background:none;border-radius:10px;padding:8px 12px;font-weight:600;font-size:14px}
+.endbtn.arm{background:var(--red);border-color:var(--red);color:#fff}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calhead h3{margin:0;font-size:20px;font-variant-numeric:tabular-nums}
+.calhead button{width:36px;height:36px;border:1px solid var(--line);background:none;border-radius:9px;font-size:16px}
+.cal2{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.cal2 .h{font-size:12px;color:var(--muted);text-align:center;padding:4px 0}
+.cal2 .h.su,.cal2 .su span{color:var(--red)}
+.cal2 .h.sa,.cal2 .sa span{color:var(--blue)}
+.cal2 button{border:0;background:none;border-radius:10px;padding:6px 0 4px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-variant-numeric:tabular-nums}
+.cal2 button span{font-size:15px;color:var(--ink);width:30px;height:30px;line-height:30px;border-radius:50%}
+.cal2 button.out{opacity:.35}
+.cal2 button.today span{font-weight:700;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.cal2 button.sel{background:var(--sunk)}
+.cal2 .dots{display:flex;gap:3px;height:6px}
+.cal2 .dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.wcard{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:12px;padding:12px 14px}
+.wcard .d{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.wcard .d span{font-weight:400;color:var(--muted);font-size:13px;white-space:nowrap}
+.wcard ul{margin:0;padding:0;list-style:none;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.wcard .live{color:var(--accent);font-weight:600;font-size:12px}
+.dex{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.dex header{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.dex h4{margin:0;font-size:15px}
+.dex .tgt{font-size:15px}
+.dex ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;font-size:14px;font-variant-numeric:tabular-nums}
+.dex li{display:grid;grid-template-columns:30px 1fr auto;gap:6px}
+.dex li .n{color:var(--muted);font-family:var(--f-disp);font-weight:600}
+.dex li.miss{color:var(--muted);opacity:.6}
+.dex li em{font-style:normal;color:var(--accent)}
+/* 그날 그 종목에만 붙는 메모. 종목 정의의 '고정 안내'(ex.note)와 달리 다른 날에는 안 보임 */
+.daymemo{display:block;width:100%;text-align:left;background:var(--sunk);border:0;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.45;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.daymemo small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.exmemo{display:flex;flex-direction:column;gap:6px;background:var(--sunk);border-radius:10px;padding:8px}
+.exmemo small{font-size:12px;color:var(--muted)}
+/* 글자 크기는 공통 규칙(터치 화면 16px, iOS 확대 방지)을 따름 */
+.exmemo textarea{background:var(--surface)}
+.exmemo .okb{align-self:flex-end;border:1px solid var(--ink);background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 16px;min-height:34px;font-size:13px}
+.dupask{display:flex;flex-direction:column;gap:6px;border:1.5px solid var(--accent);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.dupask b{font-size:14px}
+.dupask p{margin:0;font-size:13px;color:var(--muted)}
+.addmemo{align-self:flex-start;border:0;background:none;padding:4px 0;min-height:30px;font-size:13px;color:var(--muted)}
+.tbl tr.hasm td{border-bottom:0}
+.tbl .mrow td{padding-top:0;font-size:12px;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+.memoview{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.danger-row{display:flex;flex-wrap:wrap;gap:8px}
+.danger-row .ghost{flex:1;min-width:120px}
+.cgrid{display:flex;gap:8px}
+.cgrid button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;background:var(--c)}
+.cgrid button.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
+.form .full{grid-column:1/-1}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="topbar">
+    <div class="brand">PLATE<b>LOG</b></div>
+    <span class="note" id="topdate"></span>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button id="tab-home" role="tab" data-tab="home" aria-selected="true">홈</button>
+    <button id="tab-record" role="tab" data-tab="record" aria-selected="false">기록</button>
+    <button id="tab-stats" role="tab" data-tab="stats" aria-selected="false">통계</button>
+    <button id="tab-set" role="tab" data-tab="set" aria-selected="false">설정</button>
+  </div>
+  <section id="v-home" class="view"></section>
+  <section id="v-plan" class="view" hidden></section>
+  <section id="v-run" class="view" hidden></section>
+  <section id="v-finish" class="view" hidden></section>
+  <section id="v-record" class="view" hidden>
+    <div class="panel" id="calpanel"></div>
+    <div id="daypanel" class="view"></div>
+  </section>
+  <section id="v-detail" class="view" hidden></section>
+  <section id="v-stats" class="view" hidden>
+    <div class="panel" id="p100"></div>
+    <div class="panel"><h3>종목별 변화</h3><div class="picker" id="picker"></div><div id="chartbox"></div></div>
+  </section>
+  <section id="v-set" class="view" hidden>
+    <div class="panel" id="p-routine"></div>
+    <div class="panel" id="p-days"></div>
+    <div class="panel" id="p-custom"></div>
+    <div class="panel" id="p-merge"></div>
+    <div class="panel" id="p-plates"></div>
+    <div class="panel" id="p-backup">
+      <h3>기록 내보내기</h3>
+      <p id="bkinfo">아래 내용을 복사해 두거나 파일로 저장하세요.</p>
+      <textarea class="code" id="exp" readonly aria-label="내보낼 기록"></textarea>
+      <div class="row"><button class="ghost sm" id="copy">복사</button><button class="ghost sm" id="savejson">파일로 저장</button><span class="msg" id="copymsg"></span></div>
+      <p id="clipinfo">동작 영상을 넣으면 여기서 기록과 함께 zip 파일 하나로 저장할 수 있어요.</p>
+      <div class="row" id="cliprow" hidden><button class="ghost sm" id="savezip">영상까지 저장</button><span class="msg" id="zipmsg"></span></div>
+      <h3>기록 불러오기</h3>
+      <p>복사해 둔 내용을 붙여 넣거나 저장한 파일(.json, 영상 포함 .zip)을 고르세요. 지금 기록은 불러온 내용으로 바뀌어요.</p>
+      <textarea class="code" id="imp" placeholder='{"v":3,"workouts":{...}}' aria-label="불러올 기록"></textarea>
+      <div class="row"><label class="ghost sm filepick">파일 고르기<input type="file" id="impfile" accept=".json,.txt,.zip,application/json,text/plain,application/zip" aria-label="백업 파일 고르기"></label><button class="ghost sm" id="impbtn">붙여 넣은 내용 읽기</button><button class="ghost sm ok" id="impok" hidden>덮어쓰기 확인</button></div>
+      <span class="msg" id="impmsg"></span>
+      <div class="row" id="undorow" hidden><button class="ghost sm" id="undobtn">불러오기 전으로 되돌리기</button><span class="note" id="undoinfo"></span></div>
+    </div>
+  </section>
+</div>
+
+<div class="dockbar" id="homebar" hidden>
+  <div class="in"><button class="big free" id="hb-free">⚡ 자유운동</button><button class="ghost addr" id="hb-add">+ 루틴 추가</button></div>
+</div>
+<div class="dockbar" id="planbar" hidden>
+  <div class="in"><button class="big" id="pb-go">운동 시작</button></div>
+</div>
+
+<input type="file" id="clipfile" accept="video/*,image/gif,image/*" hidden aria-hidden="true" tabindex="-1">
+<div id="toast" hidden role="status" aria-live="polite"></div>
+<div id="flash" aria-hidden="true"></div>
+<div id="rest" hidden>
+  <span class="grab" aria-hidden="true"></span>
+  <div class="in">
+    <button class="open" id="rest-open" aria-label="휴식 타이머 크게 보기"><span class="lbl" id="rest-lbl">휴식</span><span class="t" id="restt">0:00</span></button>
+    <button id="rest-sub" aria-label="휴식 10초 줄이기">−10초</button><button id="rest-add" aria-label="휴식 10초 늘리기">+10초</button><button id="rest-skip">건너뛰기</button>
+  </div>
+</div>
+
+<div id="kp" hidden role="dialog" aria-label="숫자 입력">
+  <div class="in">
+    <div class="kp-head">
+      <div><b id="kp-ex"></b><small id="kp-lbl"></small></div>
+      <div class="seg" role="group" aria-label="적용 범위"><button id="kp-one" class="on" aria-pressed="true">이 세트만</button><button id="kp-all" aria-pressed="false">전체 세트</button></div>
+    </div>
+    <div class="kp-val"><span class="num" id="kp-num">0</span><span class="rt" id="kp-rt"></span></div>
+    <div class="plates" id="kp-plates"></div>
+    <div class="kp-grid" id="kp-grid">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button class="op" data-k="prev" aria-label="이전 칸">‹</button><button class="op" data-k="next" aria-label="다음 칸">›</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button class="op" data-k="s-" id="kp-sm">−1</button><button class="op" data-k="s+" id="kp-sp">+1</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button class="op" data-k="b-" id="kp-bm">−5</button><button class="op" data-k="b+" id="kp-bp">+5</button>
+      <button data-k="." id="kp-dot">.</button><button data-k="0">0</button><button class="op" data-k="bs" aria-label="지우기">⌫</button><button class="okk" data-k="ok" aria-label="입력 완료">✓</button>
+    </div>
+  </div>
+</div>
+
+<div id="v3d" hidden role="dialog" aria-label="3D 동작 보기">
+  <div class="v3-top"><div><small id="v3-count"></small><b id="v3-name"></b></div><button id="v3-close" aria-label="닫기">✕</button></div>
+  <div class="v3-stage" id="v3-stage"><div class="v3-msg" id="v3-msg">3D 모델 불러오는 중…</div><span class="v3-hint">드래그로 돌리기 · 두 손가락으로 확대</span></div>
+  <p class="v3-desc" id="v3-desc"></p>
+  <div class="v3-ctl">
+    <div class="row" style="justify-content:space-between"><span class="v3-legend"><i></i>동작을 이끄는 팔다리</span><div class="seg" role="group" aria-label="시점"><button data-v3view="side">측면</button><button data-v3view="front">정면</button><button data-v3view="angle" class="on">45도</button></div></div>
+    <div class="row"><button class="ghost" id="v3-prev">‹ 이전</button><button class="ghost ok" id="v3-play">Ⅱ 멈춤</button><button class="ghost" id="v3-next">다음 ›</button></div>
+  </div>
+</div>
+<div id="restbig" hidden role="dialog" aria-label="휴식 타이머">
+  <button class="rb-grab" id="rb-min" aria-label="작게 보기"><i></i></button>
+  <div class="lb">휴식</div>
+  <div class="ttl" id="rb-ttl"></div>
+  <div class="dial" id="rb-dial">
+    <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="8"/>
+      <circle id="rb-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"/></svg>
+    <div class="num" id="rb-num">0:00</div>
+  </div>
+  <div class="sub" id="rb-sub"></div>
+  <div class="row"><button class="ghost" id="rb-sub10" aria-label="휴식 10초 줄이기">−10초</button><button class="ghost" id="rb-add" aria-label="휴식 10초 늘리기">+10초</button><button class="ghost ok" id="rb-skip">건너뛰기</button></div>
+  <p class="rb-hint">아래로 밀면 작게 볼 수 있어요</p>
+</div>
+<div id="ov" hidden>
+  <div class="ttl" id="ovttl"></div>
+  <div class="dial" id="dial">
+    <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="8"/>
+      <circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
+    <div class="num" id="ovnum">3</div>
+  </div>
+  <div class="sub" id="ovsub"></div>
+  <div class="row"><button class="ghost" id="ovcancel">취소</button><button class="big" id="ovdone">완료</button></div>
+</div>
+
+
+<script>
+const K='platelog.v1';
+const DAYS=['일','월','화','수','목','금','토'];
+const ORDER=[1,2,3,4,5,6,0];
+const COLORS=['red','blue','green','yellow'];
+const ALL_PLATES=[25,20,15,10,5,2.5,2,1.25,1,0.5];
+const PAINS=['어깨','팔꿈치','손목','허리','고관절','무릎','발목'];
+const TYPES={weight:'무게×횟수',reps:'횟수',hold:'버티기(초)',emom:'EMOM',flow:'애니멀플로우',cardio:'시간(분)'};
+const FLOW={
+ A:['손목 풀기 1분 (준비)','비스트 ↔ 다운독 2회: 엉덩이를 높이 밀어 올렸다 비스트로','발을 손 쪽으로 모아 깊게 쪼그려 앉기, 손은 바닥에서 뗌','사이드 킥스루: 한 다리를 몸 아래로 통과시켜 반대편으로 쭉','비스트로 돌아와 반대쪽 쪼그려 앉기 → 킥스루','킥스루 → 크랩 리치: 엉덩이를 들고 반대 팔을 머리 위로','반대쪽 킥스루 → 크랩 리치 후 비스트 (여기까지 1회)'],
+ B:['손목 풀기 1분 (준비)','하프 킥스루: 무릎을 굽힌 채 다리를 몸 아래로 넣었다 빼기, 좌우','사이드 킥스루: 다리를 쭉 펴서 통과, 좌우','트래블링 비스트: 앞으로 2~3걸음','쪼그려 앉아 사이드 런지: 한 다리를 옆으로 뻗고 체중 이동, 좌우','비스트로 돌아와 사이드 킥스루 좌우 후 비스트 (여기까지 1회)']
+};
+const FLOW3D={A:[null,'비스트 홀드',null,'사이드 킥스루',null,'크랩 리치',null],B:[null,null,'사이드 킥스루','트래블링 비스트','트래블링 에이프','사이드 킥스루']};
+const FLOW3D_SEQ={A:['비스트 홀드','사이드 킥스루','크랩 리치'],B:['비스트 홀드','사이드 킥스루','트래블링 비스트','트래블링 에이프']};
+const DEF_R={
+ S:{name:'근력',sub:'바벨 · 2개 여유 남기기',color:'red',ex:[
+  {id:'pullup',name:'중량풀업',type:'weight',n:3,lo:5,hi:8,inc:2.5,rest:150},
+  {id:'fsquat',name:'프론트스쿼트',type:'weight',n:3,lo:5,hi:8,inc:5,rest:180,bar:true},
+  {id:'mpress',name:'밀리터리프레스',type:'weight',n:3,lo:6,hi:8,inc:2.5,rest:150,bar:true},
+  {id:'incline',name:'인클라인벤치프레스',type:'weight',n:3,lo:8,hi:10,inc:2.5,rest:120,bar:true,note:'시간 부족하면 이 종목부터 생략'},
+  {id:'dl',name:'데드리프트',type:'weight',n:3,lo:8,hi:8,inc:5,rest:150,bar:true,note:'1RM 60~70% · 3개 이상 여유 · 자세 무너지면 즉시 종료'},
+  {id:'hollow',name:'할로우바디 홀드',type:'hold',n:3,target:30,rest:45}]},
+ P:{name:'파워·보조',sub:'케틀벨 · 품질 우선',color:'blue',ex:[
+  {id:'aflow',name:'애니멀플로우',type:'flow',aN:5,aR:5,bN:4,bR:4,rest:60,note:'손목 풀기 1분은 준비로 먼저 · 동작 순서를 끝까지 하면 1회'},
+  {id:'swing',name:'케틀벨 스윙',type:'emom',rounds:10,reps:15},
+  {id:'bss',name:'불가리안 스플릿스쿼트',type:'weight',n:3,lo:8,hi:10,inc:2,rest:90,note:'좌우 각각'},
+  {id:'thruster',name:'케틀벨 쓰러스트',type:'weight',n:3,lo:8,hi:10,inc:2,rest:90},
+  {id:'kbrow',name:'케틀벨 원암로우',type:'weight',n:3,lo:10,hi:12,inc:2,rest:60,note:'좌우 각각'},
+  {id:'hlr',name:'행잉레그레이즈',type:'reps',n:3,lo:10,hi:15,rest:60,note:'마지막 세트만 최대 횟수'}]},
+ C:{name:'코어·회복',sub:'버티기 30초 · 10~15회',color:'green',ex:[
+  {id:'birddog',name:'버드독',type:'reps',n:3,lo:10,hi:15,rest:30,note:'좌우 번갈아'},
+  {id:'plank',name:'플랭크',type:'hold',n:3,target:30,rest:30},
+  {id:'splank',name:'사이드플랭크',type:'hold',n:3,target:30,rest:20,sides:true},
+  {id:'rplank',name:'리버스플랭크',type:'hold',n:3,target:30,rest:30},
+  {id:'ols',name:'원레그스탠드',type:'hold',n:3,target:30,rest:15,sides:true},
+  {id:'mclimb',name:'마운틴클라이머',type:'reps',n:3,lo:10,hi:15,rest:30},
+  {id:'stairs',name:'천국의계단',type:'cardio',min:10,note:'대화 가능한 강도'}]}
+};
+const DEF_MAP={0:'X',1:'S',2:'P',3:'C',4:'S',5:'P',6:'X'};
+
+/* ---------- 기본 도구 ---------- */
+const clone=o=>JSON.parse(JSON.stringify(o));
+const uid=()=>'u'+Math.random().toString(36).slice(2,9);
+const $=id=>document.getElementById(id);
+function mmss(t){t=Math.max(0,Math.round(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function num(v){const n=+v;return isFinite(n)?n:0}
+function fmtN(n){return String(+(+n).toFixed(2))}
+function dstr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function today(){return dstr(new Date())}
+function pdate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function addDays(s,n){const d=pdate(s);d.setDate(d.getDate()+n);return dstr(d)}
+function daysBetween(a,b){return Math.round((pdate(b)-pdate(a))/864e5)}
+function dow(s){return pdate(s).getDay()}
+function fmtDate(s,short){const d=pdate(s);return short?(d.getMonth()+1)+'.'+d.getDate():(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')'}
+function hm(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function period(h){return h<5?'새벽':h<11?'아침':h<14?'점심':h<18?'오후':h<22?'저녁':'밤'}
+function ago(date){const n=daysBetween(date,today());return n<=0?'오늘':n===1?'어제':n+'일 전'}
+
+/* ---------- 데이터 ---------- */
+let db=load(),saveErr=false,dataRev=0;
+/* 저장된 내용이 깨져 있으면 빈 데이터로 덮어쓰기 전에 원본을 다른 키에 남겨 둠 */
+function load(){let raw=null,d=null;try{raw=localStorage.getItem(K);d=JSON.parse(raw)}catch(e){try{if(raw)localStorage.setItem(K+'.corrupt.'+Date.now(),raw)}catch(e2){}}if(!d||typeof d!=='object')d={};return d}
+function save(){dataRev++;try{localStorage.setItem(K,JSON.stringify(db));saveErr=false;return true}catch(e){if(!saveErr){saveErr=true;setTimeout(()=>toast('기록을 저장하지 못했어요. 저장 공간이나 Safari 설정을 확인하고 바로 백업해 두세요'),0)}return false}}
+function RT(){return db.routines||DEF_R}
+function rkeys(){return Object.keys(RT()).filter(k=>k!=='X')}
+function rcolor(k){const r=RT()[k];return (r&&r.color)||({S:'red',P:'blue',C:'green'}[k])||'yellow'}
+function DMAP(){return db.dayMap||DEF_MAP}
+function settings(){db.settings=db.settings||{};return db.settings}
+function barW(){const v=+(db.settings&&db.settings.bar);return v>0?v:20}
+function platesAvail(){return (db.settings&&db.settings.plates)||[25,20,15,10,5,2.5,1.25]}
+function holdMax(ex){return !!(db.settings&&db.settings.holdMax&&db.settings.holdMax[ex.id])}
+function restOf(ex){const v=db.settings&&db.settings.rest&&db.settings.rest[ex.id];return v?+v:ex.rest}
+function ensureEditable(){if(!db.routines)db.routines=clone(DEF_R);if(!db.dayMap)db.dayMap=clone(DEF_MAP)}
+function findDef(id){for(const k of rkeys())for(const e of RT()[k].ex)if(e.id===id)return e;for(const e of (db.custom||[]))if(e.id===id)return e;for(const k in DEF_R)for(const e of DEF_R[k].ex)if(e.id===id)return e;return null}
+function library(){const seen=new Set(),g=[];
+ for(const k of rkeys()){const r=RT()[k],items=r.ex.filter(e=>!seen.has(e.id));items.forEach(e=>seen.add(e.id));if(items.length)g.push({name:r.name,c:rcolor(k),items})}
+ const cu=(db.custom||[]).filter(e=>!seen.has(e.id));if(cu.length)g.push({name:'내가 만든 종목',c:'yellow',items:cu});return g}
+/* 같은 종목인지 이름으로 볼 때는 띄어쓰기·대소문자를 무시함 */
+function nkey(s){return String(s||'').replace(/\s+/g,'').toLowerCase()}
+/* 받침에 맞춰 조사 붙이기: jo('벤치','은','는') → '벤치는'. '으로'는 ㄹ받침 뒤에서도 '로' */
+function jo(w,a,b){w=String(w);const c=w.charCodeAt(w.length-1)-0xAC00,t=c%28;return w+(c>=0&&c<=11171&&t&&!(a==='으로'&&t===8)?a:b)}
+/* 종목 정의(루틴·내가 만든 종목). 목록에서 빠진 종목은 가장 최근 기록에 남은 것 */
+function exDef(id){const d=findDef(id);if(d)return d;let best=null;
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id===id&&(!best||wsort(w)>best.k))best={k:wsort(w),ex:it.ex};return best&&best.ex}
+function inLibrary(id){return library().some(g=>g.items.some(e=>e.id===id))}
+/* 이름이 같은 다른 종목(목록 먼저, 없으면 기록에서). 새로 만들 때 기존 종목을 쓰라고 묻는 데 씀 */
+function sameName(name,exceptId){const k=nkey(name);if(!k)return null;
+ for(const g of library())for(const e of g.items)if(e.id!==exceptId&&nkey(e.name)===k)return e;
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id!==exceptId&&nkey(it.ex.name)===k)return exDef(it.ex.id);return null}
+const DUP_TIP='같은 이름의 종목이 따로 있어요 · 같은 운동이면 설정 → 종목 합치기에서 합칠 수 있어요';
+function dupBox(id){const d=exDef(id);if(!d)return'';return `<div class="dupask" role="alert"><b>같은 이름의 종목이 이미 있어요: ${esc(d.name)} (${TYPES[d.type]})</b><p>같은 운동이면 기존 종목을 쓰세요. 지난 기록과 통계가 하나로 이어져요.</p><div class="row"><button class="ghost sm ok" data-dup="use">기존 종목 쓰기</button><button class="ghost sm" data-dup="new">따로 새로 만들기</button></div></div>`}
+function hasDone(en){if(!en)return false;if(en.sets)return en.sets.some(s=>s.done);return !!en.done||en.rounds>0}
+function exDone(ex,en){if(en.sets)return en.sets.length>0&&en.sets.every(s=>s.done);return !!en.done}
+function fcfg(ex,v){return v==='B'?{n:ex.bN||4,reps:ex.bR||4}:{n:ex.aN||5,reps:ex.aR||5}}
+/* 횟수를 비워 두고 ✓하면 넣을 값(회색 안내 숫자와 같음): 지난번과 같은 무게면 지난번 그 세트 횟수,
+   무게를 바꿨거나 지난 기록이 없으면 목표 하한. 입력 없이 ✓만 눌러도 '지난번만큼 했다'로 남아 증량 제안이 잘못 나오지 않음 */
+function defReps(it,i){const ex=it.ex,en=it.en;if(ex.type==='flow')return String(fcfg(ex,en.variant).reps);
+ const last=W&&lastEntry(ex.id,W),ls=last&&last.t===ex.type&&last.en.sets?last.en.sets.filter(x=>x.done):[],p=ls[i]||ls[ls.length-1],cur=en.sets&&en.sets[i];
+ if(p&&num(p.r)>0&&(ex.type!=='weight'||(cur&&num(p.w)===num(cur.w))))return String(num(p.r));return String(ex.lo||ex.hi||'')}
+function phOf(it,i,k){return k==='w'?'0':k==='s'?String(it.ex.target):defReps(it,i)}
+function nSets(ex,en){if(ex.type==='flow')return fcfg(ex,en&&en.variant).n;return ex.sides?(ex.n||3)*2:(ex.n||3)}
+/* 세트 수를 줄일 때는 끝에서부터 안 한 세트만 지움 (완료한 세트는 그대로) */
+function trimSets(sets,n){for(let j=sets.length-1;j>=0&&sets.length>n;j--)if(!sets[j].done)sets.splice(j,1)}
+function fixFlow(ex,e){if(!e||ex.type!=='flow')return e;if(!FLOW[e.variant])e.variant='A';const c=fcfg(ex,e.variant);
+ if(!e.sets){const was=!!e.done;e.sets=Array.from({length:c.n},()=>({r:was?String(c.reps):'',done:was}));delete e.done}
+ while(e.sets.length<c.n)e.sets.push({r:'',done:false});
+ trimSets(e.sets,c.n);return e}
+function resizeEntry(it){const ex=it.ex,en=it.en;if(ex.type==='flow')return fixFlow(ex,en);if(!en.sets)return en;const n=nSets(ex,en);
+ while(en.sets.length<n)en.sets.push(ex.type==='hold'?{s:'',done:false}:{w:ex.type==='weight'&&en.sets[0]?en.sets[0].w:'',r:'',done:false});
+ trimSets(en.sets,n);return en}
+
+/* 직접 고친 백업이 화면을 깨거나 HTML로 끼어들지 않게: 숫자 칸은 숫자로, id·색은 정해진 모양만 받음 */
+const IDRE=/^[\w:.-]+$/,KEYRE=/^[\w-]+$/,NUMK=['n','lo','hi','inc','rest','target','rounds','reps','min','aN','aR','bN','bR'];
+const isObj=o=>!!o&&typeof o==='object'&&!Array.isArray(o);
+function cleanEx(e){if(!isObj(e)||!TYPES[e.type]||!IDRE.test(String(e.id||'')))return false;e.id=String(e.id);e.name=String(e.name||e.id);
+ for(const k of NUMK)if(e[k]!=null)e[k]=num(e[k]);if(e.note!=null)e.note=String(e.note);return true}
+function cleanSettings(){const st=isObj(db.settings)?db.settings:{};db.settings=st;
+ if(st.plates!=null){const p=Array.isArray(st.plates)?st.plates.map(Number).filter(x=>x>0):[];if(p.length)st.plates=p;else delete st.plates}
+ if(st.bar!=null&&!(+st.bar>=0))delete st.bar;for(const k of ['rest','holdMax','clip'])if(st[k]!=null&&!isObj(st[k]))delete st[k];
+ if(st.rest)for(const k in st.rest)st.rest[k]=num(st.rest[k]);
+ if(db.challenge!=null&&!(isObj(db.challenge)&&/^\d{4}-\d\d-\d\d$/.test(db.challenge.start||'')))delete db.challenge;
+ if(db.dayMap!=null&&!isObj(db.dayMap))delete db.dayMap;if(db.prSeen!=null&&!isObj(db.prSeen))delete db.prSeen;if(db.lastBackup!=null&&!(+db.lastBackup>0))delete db.lastBackup;
+ if(db.rest!=null&&!(isObj(db.rest)&&+db.rest.end>0&&typeof db.rest.w==='string'))delete db.rest;else if(db.rest){db.rest.start=num(db.rest.start);db.rest.mini=!!db.rest.mini}
+ const tm=db.timer;if(tm!=null){if(isObj(tm)&&+tm.t0>0&&typeof tm.w==='string'&&['hold','emom','clock'].includes(tm.mode)){for(const k of ['t0','i','target','rounds','reps','dur'])if(tm[k]!=null)tm[k]=num(tm[k]);tm.title=String(tm.title||'');tm.max=!!tm.max}else delete db.timer}}
+/* 이전 형식(날짜별 세션) → 운동 단위로 옮기기 */
+function migrate(){
+ db.workouts=isObj(db.workouts)?db.workouts:{};db.custom=Array.isArray(db.custom)?db.custom.filter(cleanEx):[];cleanSettings();
+ if(db.routines&&!isObj(db.routines))delete db.routines;
+ if(db.routines){delete db.routines.X;for(const k in db.routines){const r=db.routines[k];if(!isObj(r)||!KEYRE.test(k)){delete db.routines[k];continue}
+  r.ex=Array.isArray(r.ex)?r.ex.filter(cleanEx):[];r.name=String(r.name||'루틴');r.sub=String(r.sub||'');if(!COLORS.includes(r.color))r.color=({S:'red',P:'blue',C:'green'}[k])||'yellow';
+  for(const ex of r.ex)if(ex.type==='flow'&&ex.aN==null){Object.assign(ex,{aN:5,aR:5,bN:4,bR:4});if(!ex.rest)ex.rest=60;delete ex.min}}}
+ if(db.dayMap)for(const d in db.dayMap)if(db.dayMap[d]!=='X'&&!RT()[db.dayMap[d]])db.dayMap[d]='X';
+ if(db.sessions){for(const date of Object.keys(db.sessions).sort()){const s=db.sessions[date],ents=s.entries||{},m=s.memo||{};
+   const ids=Object.keys(ents).filter(id=>hasDone(ents[id]));
+   if(!ids.length&&!(m.text||(m.pain||[]).length||m.sleep||m.fatigue))continue;
+   const r=RT()[s.routine],order=r?r.ex.map(e=>e.id):[];ids.sort((a,b)=>((order.indexOf(a)+1)||99)-((order.indexOf(b)+1)||99));
+   const ts=[];const items=ids.map(id=>{const en=ents[id],ss=en.sets||[];
+    /* 지금은 없는 종목이면 남은 기록 모양으로 기록 방식을 짐작 (무게가 있으면 무게×횟수 등) */
+    const guess=ss.some(s=>s.w)?{type:'weight',inc:2.5}:ss.some(s=>s.s)?{type:'hold',target:30}:en.sets?{type:'reps'}:en.rounds?{type:'emom',rounds:en.rounds,reps:10}:{type:'cardio',min:10};
+    const ex=clone(findDef(id)||Object.assign({id,name:id,n:ss.length||3,lo:10,hi:10},guess));fixFlow(ex,en);
+    if(en.t)ts.push(en.t);(en.sets||[]).forEach(x=>{if(x.t)ts.push(x.t)});return{u:uid(),ex,en}});
+   const st=ts.length?Math.min(...ts):null,wid='w'+date.replace(/-/g,'');
+   db.workouts[wid]={id:wid,date,created:st||pdate(date).getTime()+12*36e5,start:st,end:ts.length>1?Math.max(...ts):null,routine:r?s.routine:null,
+    name:fmtDate(date,0).replace(/ \(.\)$/,'')+(st?' '+period(new Date(st).getHours()):'')+' 운동',items,memo:m,status:'done'}}
+  delete db.sessions}
+ if(db.routines&&!Object.keys(db.routines).length)delete db.routines;
+ /* 손상된 기록(직접 고친 백업 등)이 있으면 화면이 깨지므로 형식이 안 맞는 운동·종목은 버림 */
+ for(const id of Object.keys(db.workouts)){const w=db.workouts[id];
+  if(!isObj(w)||!KEYRE.test(id)||!/^\d{4}-\d\d-\d\d$/.test(w.date||'')||!Array.isArray(w.items)){delete db.workouts[id];continue}
+  w.id=id;if(!['plan','run','done'].includes(w.status))w.status='done';w.name=String(w.name||autoName(w.date));if(w.routine!=null&&typeof w.routine!=='string')w.routine=null;
+  const m=w.memo=isObj(w.memo)?w.memo:{};for(const k of ['sleep','fatigue'])if(m[k]!=null){m[k]=Math.round(num(m[k]));if(!(m[k]>=1&&m[k]<=5))delete m[k]}
+  if(m.pain!=null)m.pain=Array.isArray(m.pain)?m.pain.filter(p=>PAINS.includes(p)):[];if(m.text!=null)m.text=String(m.text);
+  w.prs=Array.isArray(w.prs)?w.prs.filter(isObj).map(p=>({txt:String(p.txt||''),d:String(p.d||'')})):[];
+  w.items=w.items.filter(it=>isObj(it)&&isObj(it.en)&&cleanEx(it.ex));
+  for(const it of w.items){if(!KEYRE.test(String(it.u||'')))it.u=uid();const en=it.en;if(en.sets!=null&&!Array.isArray(en.sets))delete en.sets;
+   if(en.sets){en.sets=en.sets.filter(isObj);for(const s of en.sets){for(const k of ['w','r','s'])if(s[k]!=null&&s[k]!=='')s[k]=String(num(s[k]));s.done=!!s.done}}
+   if(en.rounds!=null)en.rounds=num(en.rounds);
+   if(en.memo!=null){const v=String(en.memo).trim();if(v)en.memo=v;else delete en.memo}
+   if(it.ex.type==='flow')fixFlow(it.ex,en);else if(!en.sets&&['weight','reps','hold'].includes(it.ex.type)){en.sets=[];resizeEntry(it)}}
+  if(!(w.cur>=0&&w.cur<w.items.length))w.cur=0}
+ if(db.active&&!(db.workouts[db.active]&&db.workouts[db.active].status!=='done'))db.active=null;
+ db.v=3}
+migrate();save();
+
+/* ---------- 운동(workout) ---------- */
+let W=null;
+function wsort(w){return w.date+'|'+String(w.start||w.created||0).padStart(15,'0')}
+function doneWs(){return Object.values(db.workouts).filter(w=>w.status==='done'&&w.items.some(it=>hasDone(it.en))).sort((a,b)=>wsort(a)<wsort(b)?-1:1)}
+function wsOn(date){return Object.values(db.workouts).filter(w=>w.date===date&&(w.status!=='done'||w.items.some(it=>hasDone(it.en))||memoHas(w.memo))).sort((a,b)=>wsort(a)<wsort(b)?-1:1)}
+function memoHas(m){return m&&(m.text||(m.pain||[]).length||m.sleep||m.fatigue)}
+function wcolor(w){return w.routine&&RT()[w.routine]?rcolor(w.routine):'plate5'}
+function lastEntry(id,w){const key=wsort(w);let best=null;
+ for(const o of Object.values(db.workouts)){if(o.id===w.id||o.status!=='done')continue;const k=wsort(o);if(k>=key)continue;
+  for(const it of o.items)if(it.ex.id===id&&hasDone(it.en)&&(!best||k>best.k))best={k,date:o.date,en:it.en,t:it.ex.type}}return best}
+function suggestion(ex,last){if(ex.type!=='weight'||!last||last.t!=='weight'||!last.en.sets)return null;const s=last.en.sets.filter(x=>x.done);if(s.length<nSets(ex))return null;if(s.every(x=>+x.r>=ex.hi)){const w=+s[0].w||0;return +(w+ex.inc).toFixed(2)}return null}
+/* 애니멀플로우 A/B는 요일과 상관없이 지난번과 번갈아 고름 (처음이면 A) */
+function flowDefault(w,last){return(last&&last.en.variant==='A')?'B':'A'}
+function initEntry(ex,last,w){
+ if(ex.type==='weight'||ex.type==='reps'){const ls=last&&last.en.sets||[];return{sets:Array.from({length:nSets(ex)},(_,i)=>({w:ex.type==='weight'?((ls[i]&&ls[i].w)||(ls[0]&&ls[0].w)||''):'',r:'',done:false}))}}
+ if(ex.type==='hold')return{sets:Array.from({length:nSets(ex)},()=>({s:'',done:false}))};
+ if(ex.type==='emom')return{rounds:0,done:false};
+ if(ex.type==='flow'){const v=flowDefault(w,last);return{variant:v,sets:Array.from({length:fcfg(ex,v).n},()=>({r:'',done:false}))}}
+ return{done:false}}
+function autoName(date){const h=date===today()?new Date().getHours():null;const d=pdate(date);return (d.getMonth()+1)+'월 '+d.getDate()+'일'+(h!=null?' '+period(h):'')+' 운동'}
+function newWorkout(date,rk){const w={id:'w'+Date.now().toString(36)+uid().slice(0,3),date,created:Date.now(),start:null,end:null,routine:rk||null,name:autoName(date),items:[],memo:{},status:'plan',cur:0};
+ db.workouts[w.id]=w;if(rk)loadRoutine(w,rk);if(date===today())db.active=w.id;save();return w}
+function addItem(w,def){const ex=clone(def);const it={u:uid(),ex,en:null};it.en=initEntry(ex,lastEntry(ex.id,w),w);w.items.push(it);return it}
+function loadRoutine(w,rk){const r=RT()[rk];if(!r)return 0;if(!w.routine)w.routine=rk;const has=new Set(w.items.map(it=>it.ex.id));let n=0;for(const e of r.ex)if(!has.has(e.id)){addItem(w,e);n++}return n}
+function item(u){return W&&W.items.find(it=>it.u===u)}
+function wStats(w){let sets=0,vol=0,ex=0,full=0;const ts=[];
+ for(const it of w.items){const en=it.en,e=it.ex;if(!hasDone(en))continue;ex++;if(exDone(e,en))full++;if(en.t)ts.push(en.t);
+  if(en.sets)for(const x of en.sets)if(x.done){sets++;if(x.t)ts.push(x.t);if(e.type==='weight')vol+=num(x.w)*num(x.r)}}
+ const st=w.start||(ts.length?Math.min(...ts):null),en=w.end||(w.status!=='done'?Date.now():(ts.length?Math.max(...ts):null));
+ /* 지난 날짜를 나중에 입력한 기록은 입력한 시간이 운동 시간으로 잡히지 않게 함 */
+ return{sets,vol,ex,full,mins:st&&en&&en>st&&dstr(new Date(st))===w.date?Math.round((en-st)/60000):null}}
+function nextIdx(w,from){const n=w.items.length;for(let k=1;k<=n;k++){const j=(from+k)%n;const it=w.items[j];if(!exDone(it.ex,it.en))return j}return null}
+function allDone(w){return w.items.length>0&&w.items.every(it=>exDone(it.ex,it.en))}
+
+/* ---------- 새 기록 ---------- */
+const e1=s=>num(s.w)*(1+num(s.r)/30);
+function bestBefore(id,w){let b=0,mx=0,h=0;const key=wsort(w);for(const o of Object.values(db.workouts)){if(o.id===w.id||o.status!=='done'||wsort(o)>=key)continue;
+ for(const it of o.items){if(it.ex.id!==id||!it.en.sets)continue;for(const s of it.en.sets)if(s.done){if(num(s.w)>0){b=Math.max(b,e1(s));mx=Math.max(mx,num(s.w))}h=Math.max(h,num(s.s))}}}return{e:b,w:mx,h}}
+function prsFor(w){const out=[];for(const it of w.items){const ex=it.ex,en=it.en;if(!en.sets)continue;const st=en.sets.filter(x=>x.done);if(!st.length)continue;const pb=bestBefore(ex.id,w);
+ if(ex.type==='weight'){if(!pb.e)continue;const tw=Math.max(...st.map(x=>num(x.w))),te=Math.max(...st.map(e1));
+  if(tw>pb.w)out.push({id:ex.id,txt:`${ex.name} 최고 무게 ${fmtN(tw)}kg`,d:`+${fmtN(tw-pb.w)}kg`});else if(te>pb.e+0.05)out.push({id:ex.id,txt:`${ex.name} 추정 1RM ${fmtN(te.toFixed(1))}kg`,d:`+${fmtN((te-pb.e).toFixed(1))}kg`})}
+ else if(ex.type==='hold'){const th=Math.max(...st.map(x=>num(x.s)));if(pb.h&&th>pb.h)out.push({id:ex.id,txt:`${ex.name} ${th}초`,d:`+${th-pb.h}초`})}}
+ return out.filter((p,i,a)=>a.findIndex(q=>q.id===p.id)===i)}
+const prShown={};
+function checkPR(it){if(!W||W.status==='done')return;const p=prsFor(W).find(x=>x.id===it.ex.id);const key=W.id+it.u+(p&&p.txt);if(p&&!prShown[key]){prShown[key]=1;toast('새 기록 · '+p.txt+' ('+p.d+')');beep(1318,0.12,2)}}
+let toastT=0;function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3000)}
+function missHint(ex,last){if(ex.type!=='weight'||!last||last.t!=='weight'||!last.en.sets)return'';const st=last.en.sets.filter(x=>x.done&&x.r!=='');if(st.some(x=>num(x.r)<ex.lo))return`<p class="lastwarn">지난번 ${ex.lo}회 미만 세트가 있었어요. 같은 무게로 목표 횟수를 먼저 채우세요.</p>`;return''}
+
+/* ---------- 원판 ---------- */
+function plateSplit(w){const bw=barW();w=num(w);if(!w)return null;if(w<bw)return{err:'빈 봉('+fmtN(bw)+'kg)보다 가벼워요'};
+ /* 0.25kg 단위로 목표에 가장 가깝게(모자람 최소), 같으면 원판 수가 적게. 앞에서부터 큰 원판을 채우면 2kg·1kg이 섞일 때 틀림 */
+ const U=4,T=Math.round((w-bw)/2*U),ps=platesAvail().map(p=>Math.round(p*U)).filter(p=>p>0),best=[[]];
+ for(let s=1;s<=T;s++){best[s]=null;for(const p of ps)if(p<=s&&best[s-p]&&(!best[s]||best[s-p].length+1<best[s].length))best[s]=best[s-p].concat(p)}
+ let s=T;while(s>0&&!best[s])s--;const out=best[s].map(p=>p/U).sort((a,b)=>b-a),rem=+((w-bw)/2-s/U).toFixed(2);return{out,rem:rem>0.001?rem:0}}
+function platesHTML(w,label){const r=plateSplit(w);if(!r)return'';if(r.err)return`<div class="plates">${esc(r.err)}</div>`;
+ return `<div class="plates" aria-label="한쪽 원판">${label?'<span>'+label+'</span>':''}${r.out.length?r.out.map(p=>`<span class="pl${p<5?' sm':''}" data-p="${p}">${fmtN(p)}</span>`).join(''):'<span>빈 봉</span>'}${r.rem?`<span>· ${fmtN(r.rem)}kg 모자람</span>`:''}</div>`}
+
+/* ---------- 화면 전환 ---------- */
+let V='home';
+const MAIN=['home','record','stats','set'];
+function go(v){closeKp();closeMemo();detExMemo=null;dupNx=null;edDup=null;mgArm=false;V=v;
+ /* 화면을 옮기면 '정말 삭제' 같은 확인 대기와 운동 준비의 열린 편집 상태를 풀어서, 다음에 한 번 눌러 지워지는 일이 없게 함 */
+ endArm=finDel=detDel=detMemo=undoArm=false;if(v!=='plan'){pDel=null;pickOpen=false;newEx=null;pEdit=null}if(MAIN.includes(v)&&restIv)stopRest();
+ for(const x of ['home','plan','run','finish','record','detail','stats','set'])$('v-'+x).hidden=x!==v;
+ const main=MAIN.includes(v);$('tabs').hidden=!main;$('topbar').hidden=!main;
+ document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===v));
+ $('homebar').hidden=v!=='home';$('planbar').hidden=v!=='plan';
+ document.body.dataset.plate=W&&!main?wcolor(W):'red';
+ ({home:renderHome,plan:renderPlan,run:renderRun,finish:renderFinish,record:renderRecord,detail:renderDetail,stats:renderStats,set:renderSet})[v]();
+ window.scrollTo(0,0)}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)go(b.dataset.tab)});
+
+/* ---------- 홈 ---------- */
+function backupDue(){const ws=doneWs();if(!ws.length)return null;const ref=db.lastBackup?new Date(db.lastBackup):pdate(ws[0].date);const days=Math.floor((new Date()-ref)/864e5);
+ if(days<14)return null;return db.lastBackup?'마지막 백업 '+days+'일 전이에요.':'아직 백업한 적이 없어요.'}
+function lastOfRoutine(k){const ws=doneWs().filter(w=>w.routine===k);return ws.length?ws[ws.length-1]:null}
+function renderHome(){const t=today(),rk=DMAP()[dow(t)],act=db.active&&db.workouts[db.active];
+ $('topdate').textContent=fmtDate(t);let h='';
+ if(act){const s=wStats(act),dn=act.items.filter(it=>exDone(it.ex,it.en)).length;
+  h+=`<div class="resume"><div><b>${esc(act.name)}</b><small>${act.status==='run'?'진행 중 · '+(s.mins||0)+'분 · ':'준비 중 · '}${dn}/${act.items.length} 종목</small></div><button id="h-resume">이어서 하기</button></div>`}
+ const bd=backupDue();if(bd)h+=`<div class="banner"><span>${bd} 휴대폰을 바꾸거나 데이터가 지워지면 기록을 잃을 수 있어요.</span><button id="bk-go">지금 백업</button></div>`;
+ db.prSeen=db.prSeen||{};const recent=doneWs().reverse().find(w=>daysBetween(w.date,t)<=14&&!db.prSeen[w.id]&&(w.prs||[]).length);
+ if(recent){const p=recent.prs[0];h+=`<div class="prcard"><span class="ic" aria-hidden="true">▲</span><div><small>새 기록 · ${ago(recent.date)}</small><b>${esc(p.txt)} <em>${esc(p.d||'')}</em></b>${recent.prs.length>1?`<small>외 ${recent.prs.length-1}개</small>`:''}</div><button class="x" data-prx="${recent.id}" aria-label="닫기">✕</button></div>`}
+ const r=rk&&RT()[rk];
+ if(r){const l=lastOfRoutine(rk);h+=`<div class="reco" style="--c:var(--${rcolor(rk)})"><small>오늘의 추천 · ${DAYS[dow(t)]}요일</small><h2>${esc(r.name)}</h2><p>${r.ex.map(e=>esc(e.name)).join(' · ')}</p><p>${r.ex.length}종목${l?' · 마지막 '+ago(l.date):''}</p><button class="big" data-start="${rk}">이 루틴으로 시작</button></div>`}
+ else h+=`<div class="reco" style="--c:var(--yellow)"><small>오늘의 추천 · ${DAYS[dow(t)]}요일</small><h2>쉬는 날</h2><p>가벼운 걷기 정도면 충분해요. 운동하고 싶으면 아래 루틴이나 자유운동으로 시작하세요.</p></div>`;
+ h+=`<div class="sech"><h3>내 루틴</h3><span class="note">${rkeys().length}개</span></div><div class="rlist">`+rkeys().map(k=>{const R=RT()[k],l=lastOfRoutine(k);
+  return `<div class="rrow" style="--c:var(--${rcolor(k)})"><span class="dot"></span><div><b>${esc(R.name)}</b><small>${R.ex.length}종목 · ${l?'마지막 '+ago(l.date):'아직 기록 없음'}</small></div><button data-start="${k}">시작</button></div>`}).join('')+'</div>';
+ $('v-home').innerHTML=h}
+$('v-home').addEventListener('click',e=>{unlockAudio();const b=e.target.closest('button');if(!b)return;
+ if(b.id==='h-resume'){W=db.workouts[db.active];go(W.status==='run'?'run':'plan');return}
+ if(b.id==='bk-go'){go('set');setTimeout(()=>$('p-backup').scrollIntoView({block:'start'}),50);return}
+ if(b.dataset.prx){db.prSeen[b.dataset.prx]=1;save();renderHome();return}
+ if(b.dataset.start){startNew(today(),b.dataset.start)}});
+/* 준비만 하고 시작 안 한 운동은 새로 시작하면 버림. 이미 시작한 운동은 세트를 안 했어도 지우지 않음 */
+function startNew(date,rk){if(date===today()&&db.active&&db.workouts[db.active]){const a=db.workouts[db.active];
+  if(a.status==='plan'&&!a.items.some(it=>hasDone(it.en))){delete db.workouts[a.id];db.active=null}else{toast('진행 중인 운동이 있어요. 끝내고 새로 시작하세요');W=a;go(a.status==='run'?'run':'plan');return}}
+ W=newWorkout(date,rk);go('plan')}
+$('hb-free').addEventListener('click',()=>{unlockAudio();startNew(today(),null)});
+$('hb-add').addEventListener('click',()=>{ensureEditable();const k='r'+Date.now().toString(36);db.routines[k]={name:'새 루틴',sub:'',color:COLORS[rkeys().length%4],ex:[]};save();edR=k;go('set');setTimeout(()=>{const n=$('ed-rname');if(n){n.focus();n.select()}},60)});
+
+/* ---------- 운동 준비 ---------- */
+let pEdit=null,pDel=null,pickOpen=false,pickQ='',newEx=null,dupNx=null;
+function exSummary(ex){const r=ex.rest?' · 휴식 '+mmss(restOf(ex)):'';
+ if(ex.type==='weight'||ex.type==='reps')return ex.n+'×'+(ex.lo===ex.hi?ex.lo:ex.lo+'–'+ex.hi)+'회'+r;
+ if(ex.type==='hold')return ex.n+'×'+ex.target+'초'+(ex.sides?' 좌우':'')+r;
+ if(ex.type==='emom')return ex.rounds+'분 · 매분 '+ex.reps+'개';
+ if(ex.type==='flow')return `A ${fcfg(ex,'A').n}×${fcfg(ex,'A').reps} · B ${fcfg(ex,'B').n}×${fcfg(ex,'B').reps}`+r;
+ return ex.min+'분'}
+function itemProg(it){const en=it.en;if(en.sets){const d=en.sets.filter(s=>s.done).length;return d?d+'/'+en.sets.length+'세트':''}return en.done?'완료':''}
+function exForm(ex,pre,opts){opts=opts||{};const t=ex.type;
+ const f=(id,lab,val,type='number',cls)=>`<label class="${cls||''}">${lab}<input id="${pre}-${id}" type="${type}" ${type==='number'?'inputmode="decimal" step="any"':''} value="${esc(val??'')}"></label>`;
+ let h=`<div class="form">${f('name','종목 이름',ex.name,'text','w2')}`;
+ if(opts.type)h+=`<label class="w2">기록 방식<select id="${pre}-type">${Object.entries(TYPES).filter(([k])=>k!=='flow').map(([k,v])=>`<option value="${k}"${k===t?' selected':''}>${v}</option>`).join('')}</select></label>`;
+ if(t==='weight'||t==='reps')h+=f('n','세트 수',ex.n??3)+f('rest','휴식(초)',ex.rest!=null?restOf(ex):90)+f('lo','목표 횟수 최소',ex.lo??8)+f('hi','목표 횟수 최대',ex.hi??10)+(t==='weight'?f('inc','증량 단위(kg)',ex.inc??2.5)+`<label class="cb"><input type="checkbox" id="${pre}-bar"${ex.bar?' checked':''}>바벨 (원판 표시)</label>`:'')+`<label class="cb"><input type="checkbox" id="${pre}-sides"${ex.sides?' checked':''}>좌우 따로 기록</label>`;
+ if(t==='hold')h+=f('n','세트 수',ex.n??3)+f('target','목표(초)',ex.target??30)+f('rest','휴식(초)',ex.rest!=null?restOf(ex):30)+`<label class="cb"><input type="checkbox" id="${pre}-sides"${ex.sides?' checked':''}>좌우 따로 기록</label>`;
+ if(t==='emom')h+=f('rounds','라운드(분)',ex.rounds??10)+f('reps','매분 횟수',ex.reps??15);
+ if(t==='flow')h+=f('aN','루틴 A 세트',ex.aN??5)+f('aR','루틴 A 횟수',ex.aR??5)+f('bN','루틴 B 세트',ex.bN??4)+f('bR','루틴 B 횟수',ex.bR??4)+f('rest','휴식(초)',ex.rest!=null?restOf(ex):60);
+ if(t==='cardio')h+=f('min','시간(분)',ex.min??10);
+ h+=f('note','고정 안내 (선택 · 매번 보여요)',ex.note,'text','w2');
+ if(opts.sync)h+=`<label class="cb w2"><input type="checkbox" id="${pre}-sync" checked>루틴에도 저장</label>`;
+ h+=`<div class="row w2" style="grid-column:span 2"><button class="ghost sm ok" data-fs="${pre}">${opts.saveLbl||'저장'}</button><button class="ghost sm" data-fc="${pre}">취소</button></div></div>`;return h}
+function readExForm(pre,base){const g=id=>{const e=$(pre+'-'+id);return e?e.value:undefined},n=id=>{const v=g(id);return v===undefined||v===''?undefined:num(v)},c=id=>{const e=$(pre+'-'+id);return e?e.checked:false};
+ const o=Object.assign({},base);o.name=(g('name')||'').trim()||base.name||'새 종목';const ty=g('type');if(ty)o.type=ty;
+ for(const k of ['n','rest','lo','hi','inc','target','rounds','reps','min','aN','aR','bN','bR']){const v=n(k);if(v!==undefined)o[k]=v}
+ const nt=(g('note')||'').trim();if(nt)o.note=nt;else delete o.note;
+ if($(pre+'-bar'))o.bar=c('bar')||undefined;if($(pre+'-sides'))o.sides=c('sides')||undefined;
+ /* 0초 목표(바로 자동 완료)·음수 휴식 같은 값이 들어가지 않게 정수로 맞춤 */
+ for(const k of ['n','lo','hi','target','rounds','reps','min','aN','aR','bN','bR'])if(o[k]!=null)o[k]=Math.max(1,Math.round(o[k]));
+ if(o.rest!=null)o.rest=Math.max(0,Math.round(o.rest));if(o.inc!=null&&!(o.inc>0))o.inc=2.5;
+ if(o.lo!=null&&o.hi!=null&&o.lo>o.hi)[o.lo,o.hi]=[o.hi,o.lo];if(o.n!=null)o.n=Math.min(10,o.n);
+ for(const k of ['aN','bN'])if(o[k]!=null)o[k]=Math.min(10,o[k]);return o}
+/* 폼의 휴식 칸은 운동 화면에서 바꾼 값까지 반영해 보여 줌. 그대로 두면 원래 값을 유지하고, 바꾸면 그 값을 쓰고 운동 화면에서 바꾼 값은 지움 */
+function restSave(o,prev){if(!prev||o.rest==null)return o;if(o.rest!==restOf(prev)){if(db.settings&&db.settings.rest)delete db.settings.rest[o.id]}else o.rest=prev.rest;return o}
+/* 같은 종목이 여러 루틴에 있으면 지금 운동의 루틴 것을 먼저 고름 */
+function routineDefRef(id){if(!db.routines)return null;const pk=W&&W.routine&&db.routines[W.routine];if(pk){const e=pk.ex.find(x=>x.id===id);if(e)return e}for(const k in db.routines){const e=db.routines[k].ex.find(x=>x.id===id);if(e)return e}return null}
+function inRoutine(id){return !!(routineDefRef(id)||(!db.routines&&Object.values(DEF_R).some(r=>r.ex.some(e=>e.id===id))))}
+function renderPlan(){const w=W,edit=w.status==='done',run=w.status==='run';
+ let h=`<div class="appbar"><button class="back" id="p-back" aria-label="뒤로">‹</button><div class="ttl"><input class="pname" id="p-name" value="${esc(w.name)}" aria-label="운동 이름"><small>${fmtDate(w.date)}${w.routine&&RT()[w.routine]?` · <span class="tag" style="--c:var(--${rcolor(w.routine)})"><i></i>${esc(RT()[w.routine].name)}</span>`:' · 자유운동'}</small></div></div>`;
+ if(!w.items.length&&!pickOpen)h+=`<div class="empty2">아직 운동이 없어요.<br>루틴을 불러오거나 운동을 하나씩 추가하세요.</div>`;
+ h+='<div class="plist">'+w.items.map((it,i)=>{const pg=itemProg(it),dn=exDone(it.ex,it.en);
+  return `<div class="pitem${dn?' done':''}${run&&i===w.cur?' cur':''}"><span class="no">${dn?'✓':i+1}</span><div><b>${esc(it.ex.name)}</b><small>${exSummary(it.ex)}${pg?' · '+pg:''}</small></div><div class="acts"><button data-pa="up" data-u="${it.u}" aria-label="위로"${i===0?' disabled':''}>↑</button><button data-pa="down" data-u="${it.u}" aria-label="아래로"${i===w.items.length-1?' disabled':''}>↓</button><button data-pa="edit" data-u="${it.u}" aria-label="수정">✎</button><button class="del${pDel===it.u?' arm':''}" data-pa="del" data-u="${it.u}" aria-label="삭제">${pDel===it.u?'삭제':'✕'}</button></div>${pEdit===it.u?exForm(it.ex,'ie',{sync:inRoutine(it.ex.id)}):''}</div>`}).join('')+'</div>';
+ if(pickOpen)h+=pickerHTML();
+ else h+=`<button class="ghost" id="p-add" style="width:100%">+ 운동 추가</button><div class="sech"><h3 style="font-size:15px">루틴 불러오기</h3></div><div class="loadrow">${rkeys().map(k=>`<button data-load="${k}" style="--c:var(--${rcolor(k)})"><i></i>${esc(RT()[k].name)} (${RT()[k].ex.length})</button>`).join('')}</div>`;
+ if(!edit&&w.items.length)h+=`<button class="ghost sm danger" id="p-discard" style="align-self:flex-start">${pDel==='__w'?'정말 취소하기':'이 운동 취소하기'}</button>`;
+ h+='<div style="height:70px"></div>';
+ $('v-plan').innerHTML=h;
+ const go2=$('pb-go');go2.textContent=edit?'수정 끝내기':run?'운동 이어가기':'운동 시작';go2.disabled=!w.items.length;
+}
+function pickRes(){const q=pickQ.trim(),inW=new Set(W.items.map(it=>it.ex.id));
+ const gs=library().map(g=>({...g,items:g.items.filter(e=>!q||nkey(e.name).includes(nkey(q)))})).filter(g=>g.items.length);
+ return `${gs.map(g=>`<div class="libg"><h4 style="--c:var(--${g.c})"><i></i>${esc(g.name)}</h4>${g.items.map(e=>`<button class="libitem" data-addex="${e.id}"><span><b>${esc(e.name)}</b><small>${TYPES[e.type]} · ${exSummary(e)}</small></span><em>${inW.has(e.id)?'추가됨 ✓':'+ 추가'}</em></button>`).join('')}</div>`).join('')||'<p class="note">찾는 종목이 없어요. 아래에서 새로 만드세요.</p>'}
+ <button class="ghost sm" id="pk-new">+ 새 종목 만들기${q?' · '+esc(q):''}</button>`}
+function pickerHTML(){
+ if(newEx)return `<div class="sheet"><div class="row" style="justify-content:space-between"><b>새 종목 만들기</b></div>${exForm(newEx,'nx',{type:true,saveLbl:'만들고 추가'})}${dupNx?dupBox(dupNx):''}</div>`;
+ return `<div class="sheet"><div class="row" style="justify-content:space-between"><b>운동 추가</b><button class="ghost sm" id="pk-done">완료</button></div>
+ <input class="q" id="pk-q" type="search" placeholder="종목 이름 검색" value="${esc(pickQ)}" aria-label="종목 검색"><div id="pk-res" style="display:flex;flex-direction:column;gap:10px">${pickRes()}</div></div>`}
+/* 새 종목 저장: 이름이 같은 종목이 있으면 먼저 기존 종목을 쓸지 물음(force면 그대로 만듦) */
+function saveNx(w,force){const o=readExForm('nx',newEx),d=!force&&sameName(o.name,o.id);
+ if(d){newEx=o;dupNx=d.id;renderPlan();const x=$('v-plan').querySelector('.dupask');if(x)x.scrollIntoView({block:'center'});return}
+ dupNx=null;db.custom=db.custom||[];db.custom.push(o);addItem(w,o);newEx=null;save();toast(o.name+' 추가');renderPlan()}
+$('v-plan').addEventListener('input',e=>{if(e.target.id==='p-name'){W.name=e.target.value;save()}else if(e.target.id==='pk-q'){pickQ=e.target.value;$('pk-res').innerHTML=pickRes()}});
+$('v-plan').addEventListener('change',e=>{if(e.target.id==='nx-type'){newEx=readExForm('nx',newEx);newEx.type=e.target.value;renderPlan()}});
+$('v-plan').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const w=W;
+ if(b.dataset.pa!=='del'&&b.id!=='p-discard')pDel=null;
+ if(b.id==='p-back'){pickOpen=false;newEx=null;pEdit=null;
+  if(w.status==='done'){w.prs=prsFor(w).map(p=>({txt:p.txt,d:p.d}));
+   /* 종목을 다 지운 기록은 달력에서 찾을 수 없게 되므로 지움 (컨디션 메모가 있으면 남김) */
+   if(!w.items.length&&!memoHas(w.memo)){delete db.workouts[w.id];save();calSel=w.date;W=null;toast('기록을 삭제했어요');go('record');return}save();go('detail');return}
+  if(w.status==='run'&&w.items.length){go('run');return}
+  if(!w.items.length){delete db.workouts[w.id];if(db.active===w.id)db.active=null;save()}go('home');return}
+ if(b.id==='p-discard'){if(pDel!=='__w'){pDel='__w';renderPlan();return}delete db.workouts[w.id];if(db.active===w.id)db.active=null;save();pDel=null;W=null;toast('운동을 취소했어요');go('home');return}
+ if(b.id==='p-add'){pickOpen=true;pickQ='';newEx=null;renderPlan();return}
+ if(b.id==='pk-done'){pickOpen=false;renderPlan();return}
+ if(b.id==='pk-new'){dupNx=null;newEx={id:'c'+Date.now().toString(36),name:pickQ.trim(),type:'weight',n:3,lo:8,hi:10,inc:2.5,rest:90};renderPlan();const n=$('nx-name');if(n)n.focus();return}
+ if(b.dataset.addex){const d=findDef(b.dataset.addex);if(d){addItem(w,d);save();toast(d.name+' 추가');const y=scrollY;renderPlan();scrollTo(0,y)}return}
+ if(b.dataset.load){const n=loadRoutine(w,b.dataset.load);save();toast(n?RT()[b.dataset.load].name+' '+n+'종목 불러옴':'이미 다 들어 있어요');renderPlan();return}
+ if(b.dataset.fs==='nx'){saveNx(w,false);return}
+ if(b.dataset.dup){if(b.dataset.dup==='new'){saveNx(w,true);return}
+  const d=exDef(dupNx);dupNx=null;newEx=null;
+  if(d){if(!inLibrary(d.id))(db.custom=db.custom||[]).push(clone(d));if(w.items.some(it=>it.ex.id===d.id))toast(jo(d.name,'은','는')+' 이미 들어 있어요');else{addItem(w,d);toast(d.name+' 추가')}save()}
+  renderPlan();return}
+ if(b.dataset.fc==='nx'){newEx=null;dupNx=null;renderPlan();return}
+ if(b.dataset.fs==='ie'){const it=item(pEdit);const pn=it.ex.name,o=restSave(readExForm('ie',it.ex),it.ex);if(nkey(pn)!==nkey(o.name)&&sameName(o.name,o.id))setTimeout(()=>toast(DUP_TIP),0);const sync=$('ie-sync')&&$('ie-sync').checked;it.ex=o;resizeEntry(it);
+  /* 루틴 정의를 통째로 바꿔야 메모·바벨·좌우를 끈 것도 루틴에 반영됨 (Object.assign은 지운 항목을 못 지움) */
+  if(sync){ensureEditable();const ref=routineDefRef(o.id);if(ref){for(const k of Object.keys(ref))delete ref[k];Object.assign(ref,clone(o))}}pEdit=null;save();renderPlan();return}
+ if(b.dataset.fc==='ie'){pEdit=null;renderPlan();return}
+ const u=b.dataset.u,i=w.items.findIndex(it=>it.u===u);if(i<0)return;
+ if(b.dataset.pa==='up'&&i>0){[w.items[i-1],w.items[i]]=[w.items[i],w.items[i-1]];if(w.cur===i)w.cur=i-1;else if(w.cur===i-1)w.cur=i;save();renderPlan()}
+ else if(b.dataset.pa==='down'&&i<w.items.length-1){[w.items[i+1],w.items[i]]=[w.items[i],w.items[i+1]];if(w.cur===i)w.cur=i+1;else if(w.cur===i+1)w.cur=i;save();renderPlan()}
+ else if(b.dataset.pa==='edit'){pEdit=pEdit===u?null:u;renderPlan()}
+ else if(b.dataset.pa==='del'){if(pDel!==u){pDel=u;renderPlan();return}w.items.splice(i,1);if(i<w.cur)w.cur--;if(w.cur>=w.items.length)w.cur=Math.max(0,w.items.length-1);pDel=null;save();renderPlan()}});
+$('pb-go').addEventListener('click',()=>{unlockAudio();const w=W;if(!w||!w.items.length)return;pickOpen=false;newEx=null;pEdit=null;
+ if(w.status==='done'){w.prs=prsFor(w).map(p=>({txt:p.txt,d:p.d}));save();go('detail');return}
+ if(w.status==='plan'){w.status='run';w.start=w.date===today()?Date.now():null;w.cur=exDone(w.items[0].ex,w.items[0].en)?(nextIdx(w,0)??0):0;
+  /* 지난 날짜 기록은 오늘 진행 중인 운동을 밀어내지 않음 (달력에서 '진행 중'으로 이어서 할 수 있음) */
+  if(w.date===today()||!db.active||!db.workouts[db.active])db.active=w.id;save()}
+ go('run')});
+
+/* ---------- 운동 진행 ---------- */
+let openRest=null,openF=null,endArm=false,openMemo=null;
+/* 열린 종목 메모를 닫으며 앞뒤 공백을 정리(쓰는 동안에는 칠 때마다 en.memo에 저장) */
+function closeMemo(){if(openMemo==null)return;const it=W&&W.items.find(x=>x.u===openMemo);openMemo=null;
+ if(it&&it.en.memo!=null){const v=String(it.en.memo).trim();if(v)it.en.memo=v;else delete it.en.memo;save()}}
+function cellHTML(it,i,k,val,ph,unit,lab){const ed=kp&&kp.u===it.u&&kp.i===i&&kp.k===k;
+ return `<button class="cell${ed?' editing'+(kp.fresh?' fresh':''):''}" id="${it.u}-${i}-${k}" data-cell data-u="${it.u}" data-i="${i}" data-k="${k}" aria-label="${lab}">${val!==''&&val!=null?'<span class="v">'+esc(val)+'</span>':'<span class="ph">'+ph+'</span>'}<span class="u">${unit}</span></button>`}
+function setAdj(it){const da=`data-u="${it.u}"`,n=it.ex.n||3;return `<div class="setadj"><button class="ghost sm" data-act="setn" data-d="-1" ${da}${n<=1?' disabled':''} aria-label="세트 하나 줄이기">− 세트</button><button class="ghost sm" data-act="setn" data-d="1" ${da}${n>=10?' disabled':''} aria-label="세트 하나 늘리기">+ 세트</button></div>`}
+function lastText(ex,last){if(!last)return'';const en=last.en;let t;
+ if(ex.type==='weight'&&en.sets){const s=en.sets.filter(x=>x.done);const ws=[...new Set(s.map(x=>x.w))];t=ws.length===1?(ws[0]?ws[0]+'kg × ':'')+s.map(x=>x.r||'-').join(' · '):s.map(x=>(x.w||0)+'×'+(x.r||'-')).join(' · ')}
+ else if(ex.type==='reps'&&en.sets)t=en.sets.filter(x=>x.done).map(x=>x.r||'-').join(' · ')+'회';
+ else if(ex.type==='hold'&&en.sets)t=en.sets.filter(x=>x.done).map(x=>x.s||'-').join(' · ')+'초';
+ else if(ex.type==='emom')t=en.rounds+'/'+ex.rounds+' 라운드';
+ else if(ex.type==='flow')t='루틴 '+en.variant+(en.sets?' · '+en.sets.filter(x=>x.done).map(x=>x.r||'-').join(' · ')+'회':'');
+ else t='완료';
+ return '<p class="last">지난번 '+fmtDate(last.date,true)+' · <b>'+esc(t)+'</b></p>'}
+function card(it){const ex=it.ex,en=it.en,last=lastEntry(ex.id,W),sug=W.status==='done'?null:suggestion(ex,last),U=it.u;
+ let tgt='',body='';const da=`data-u="${U}"`;
+ if(ex.type==='weight'||ex.type==='reps'){tgt=ex.n+'×'+(ex.lo===ex.hi?ex.lo:ex.lo+'–'+ex.hi);
+  body='<div class="sets">'+en.sets.map((s,i)=>{const lab=ex.sides?(i%2?'우':'좌')+(Math.floor(i/2)+1):i+1;return ex.type==='weight'?
+   `<div class="set${s.done?' ok':''}"><span class="n">${lab}</span>${cellHTML(it,i,'w',s.w,'0','kg',lab+'세트 무게')}<span class="x">×</span>${cellHTML(it,i,'r',s.r,defReps(it,i),'회',lab+'세트 횟수')}<button class="ck" data-act="ck" ${da} data-i="${i}" aria-label="${lab}세트 완료">✓</button></div>`:
+   `<div class="set reps${s.done?' ok':''}"><span class="n">${lab}</span>${cellHTML(it,i,'r',s.r,defReps(it,i),'회',lab+'세트 횟수')}<button class="ck" data-act="ck" ${da} data-i="${i}" aria-label="${lab}세트 완료">✓</button></div>`}).join('')+'</div>'+setAdj(it);
+  if(ex.type==='weight'&&ex.bar){const nx=en.sets.find(s=>!s.done)||en.sets[0];if(nx&&nx.w)body+=platesHTML(nx.w,'한쪽')}}
+ else if(ex.type==='hold'){tgt=ex.n+'×'+ex.target+'초'+(ex.sides?' 좌우':'');const hx=holdMax(ex);
+  body=`<div class="row"><div class="seg" role="group" aria-label="버티기 방식"><button class="${hx?'':'on'}" data-act="hmode" data-m="stop" ${da} aria-pressed="${!hx}">목표에서 멈춤</button><button class="${hx?'on':''}" data-act="hmode" data-m="max" ${da} aria-pressed="${hx}">최대로 버티기</button></div><span class="note">${hx?'목표 후에도 계속, 완료를 누를 때까지':ex.target+'초가 되면 자동 완료'}</span></div>`+'<div class="sets">'+en.sets.map((s,i)=>{const lab=ex.sides?(i%2?'우':'좌')+(Math.floor(i/2)+1):i+1;return `<div class="set hold${s.done?' ok':''}"><span class="n">${lab}</span>${cellHTML(it,i,'s',s.s,ex.target,'초',lab+' 버틴 시간')}<button class="play" data-act="hold" ${da} data-i="${i}">▶ 시작</button><button class="ck" data-act="ck" ${da} data-i="${i}" aria-label="${lab} 완료">✓</button></div>`}).join('')+'</div>'+setAdj(it)}
+ else if(ex.type==='emom'){tgt=ex.rounds+'분 EMOM';
+  body=`<p class="note">매분 시작할 때 ${ex.reps}개, 남은 시간은 휴식</p><div class="row"><button class="big" data-act="emom" ${da}>▶ ${ex.rounds}분 시작</button><button class="ghost${en.done?' ok':''}" data-act="toggle" ${da}>${en.rounds?en.rounds+'/'+ex.rounds+' 라운드':'완료 표시'}</button></div>`}
+ else if(ex.type==='flow'){const v=FLOW[en.variant]?en.variant:'A',c=fcfg(ex,v);tgt=c.n+'×'+c.reps+'회';
+  body=`<div class="row"><div class="seg"><button class="${v==='A'?'on':''}" data-act="var" data-v="A" ${da}>루틴 A</button><button class="${v==='B'?'on':''}" data-act="var" data-v="B" ${da}>루틴 B</button></div><span class="note">${v==='A'?'바디 플로우':'킥스루·사이드 런지'}</span></div><ol class="flow">${FLOW[v].map((t,j)=>'<li><span>'+esc(t)+'</span>'+(FLOW3D[v][j]?`<button class="d3" data-act="d3" data-v="${v}" data-p="${FLOW3D[v][j]}" ${da} aria-label="${FLOW3D[v][j]} 3D로 보기">3D</button>`:'')+'</li>').join('')}</ol><button class="ghost sm" data-act="d3" data-v="${v}" ${da} style="align-self:flex-start">3D로 보기</button>`
+   +'<div class="sets">'+en.sets.map((s,i)=>`<div class="set reps${s.done?' ok':''}"><span class="n">${i+1}</span>${cellHTML(it,i,'r',s.r,c.reps,'회',(i+1)+'세트 횟수')}<button class="ck" data-act="ck" ${da} data-i="${i}" aria-label="${i+1}세트 완료">✓</button></div>`).join('')+'</div>'}
+ else{tgt=ex.min+'분';body=`<div class="row"><button class="big" data-act="clock" ${da}>▶ ${ex.min}분 타이머</button><button class="ghost${en.done?' ok':''}" data-act="toggle" ${da}>${en.done?'완료됨':'완료 표시'}</button></div>`}
+ let restUI='';
+ if(ex.rest){const rv=restOf(ex),custom=rv!==ex.rest;
+  restUI=openRest===U?`<div class="restedit"><span>휴식</span><button data-act="restadj" data-d="-10" ${da} aria-label="10초 줄이기">−10초</button><b>${mmss(rv)}</b><button data-act="restadj" data-d="10" ${da} aria-label="10초 늘리기">+10초</button>${custom?`<button data-act="restreset" ${da}>기본 ${mmss(ex.rest)}</button>`:''}<button class="okb" data-act="restedit" ${da}>확인</button></div>`:
+   `<button class="restchip${custom?' custom':''}" data-act="restedit" ${da} aria-label="휴식 시간 바꾸기">휴식 ${mmss(rv)} <span aria-hidden="true">✎</span></button>`}
+ const ck=clipKey(ex,en),clipLbl=ex.type==='flow'?'루틴 '+ck.split(':')[1]+' ':'';
+ const cu=clipURL[ck],cv=clipView(ck),copen=cu&&cv.open,dc=`${da} data-ck="${ck}"`;
+ const clipChip=cu?`<button class="clipchip on" data-act="clip-toggle" ${dc} aria-expanded="${!!copen}">${copen?clipLbl+'동작 접기':'▶ '+clipLbl+'동작 보기'}</button>`:`<button class="clipchip" data-act="clip-add" ${dc}>+ ${clipLbl}동작 영상</button>`;
+ const clipBody=copen?`<div class="clip"><div class="clipbox" style="--z:${cv.z};--y:${cv.y}%">${clipType[ck]&&clipType[ck].startsWith('image')?`<img src="${cu}" alt="${esc(ex.name)} 동작">`:`<video src="${cu}" muted loop autoplay playsinline aria-label="${esc(ex.name)} 동작 영상"></video>`}</div>
+  <div class="cliptools"><span>확대</span><button data-act="clip-z" data-d="-0.25" ${dc} aria-label="축소">−</button><button data-act="clip-z" data-d="0.25" ${dc} aria-label="확대">+</button><span>위치</span><button data-act="clip-y" data-d="-4" ${dc} aria-label="위로">↑</button><button data-act="clip-y" data-d="4" ${dc} aria-label="아래로">↓</button><span class="sp"></span><button data-act="clip-add" ${dc}>바꾸기</button><button class="del${clipDelArm===ck?' arm':''}" data-act="clip-del" ${dc}>${clipDelArm===ck?'삭제 확인':'삭제'}</button></div></div>`:'';
+ let fChip='',fEdit='';
+ if(ex.type==='flow'){const fv=en.variant==='B'?'B':'A',fc=fcfg(ex,fv);
+  if(openF===U)fEdit=`<div class="restedit fedit"><span class="fl">루틴 ${fv} 목표</span><span>세트</span><button data-act="fadj" data-f="n" data-d="-1" ${da} aria-label="세트 줄이기">−</button><b>${fc.n}</b><button data-act="fadj" data-f="n" data-d="1" ${da} aria-label="세트 늘리기">+</button><span>횟수</span><button data-act="fadj" data-f="r" data-d="-1" ${da} aria-label="횟수 줄이기">−</button><b>${fc.reps}</b><button data-act="fadj" data-f="r" data-d="1" ${da} aria-label="횟수 늘리기">+</button><button class="okb" data-act="fedit" ${da}>확인</button></div>`;
+  else fChip=`<button class="restchip" data-act="fedit" ${da} aria-label="세트와 횟수 바꾸기">${fc.n}세트 × ${fc.reps}회 <span aria-hidden="true">✎</span></button>`}
+ /* 그날 이 종목 메모: 없으면 칩, 있으면 내용, 누르면 고치기 */
+ const mem=en.memo||'',mday=W.date===today()?'오늘':'이 날';
+ const memoChip=!mem&&openMemo!==U?`<button class="clipchip" data-act="exmemo" ${da}>+ 메모</button>`:'';
+ const memoUI=openMemo===U?`<div class="exmemo"><small>${mday} ${esc(ex.name)}에만 남는 메모 · 다른 날에는 안 보여요</small><textarea data-exmemo="${U}" rows="2" maxlength="500" placeholder="예: 그립이 미끄러짐, 왼쪽 무릎 시큰" aria-label="${esc(ex.name)} ${mday} 메모">${esc(mem)}</textarea><button class="okb" data-act="exmemo" ${da}>확인</button></div>`
+  :mem?`<button class="daymemo" data-act="exmemo" ${da} aria-label="${mday} 메모 고치기"><small>${mday} 메모 ✎</small>${esc(mem)}</button>`:'';
+ const ctl=(openRest===U?restUI+`<div class="ctl">${fChip}${clipChip}${memoChip}</div>`:`<div class="ctl">${restUI}${fChip}${clipChip}${memoChip}</div>`)+fEdit+memoUI;
+ return `<article class="ex${exDone(ex,en)?' done':''}" id="card-${U}"><header><h3>${esc(ex.name)}</h3><span class="tgt">${tgt}</span></header>${ex.note?'<p class="note">'+esc(ex.note)+'</p>':''}${ctl}${clipBody}${lastText(ex,last)}${missHint(ex,last)}${sug!=null?`<button class="sug" data-act="sug" ${da} data-w="${sug}">지난번 목표 달성 · 오늘 ${sug}kg 적용</button>`:''}${body}</article>`}
+function refresh(it){const el=$('card-'+it.u);if(el)el.outerHTML=card(it);paintRunHead()}
+function renderRun(){const w=W;if(!w.items.length){go('plan');return}if(w.cur>=w.items.length)w.cur=0;const it=w.items[w.cur],edit=w.status==='done';
+ /* 진행 중에는 자동 이동과 같은 기준(안 끝난 다음 종목)으로 안내 */
+ const ni=edit?w.cur+1:nextIdx(w,w.cur),nx=ni!==w.cur?w.items[ni]:null;
+ $('v-run').innerHTML=`<div class="runhead"><div class="appbar"><button class="back" id="r-list" aria-label="목록·편집">☰</button><div class="ttl"><b>${esc(w.name)}</b><small id="r-sub"></small></div>${edit||!w.start?'':'<span class="elapsed" id="r-el">0:00</span>'}<button class="endbtn${endArm?' arm':''}" id="r-end">${edit?'완료':endArm?'정말 끝내기':'끝내기'}</button></div>
+  <div class="prog" id="r-prog"></div>
+  <div class="pager"><button id="r-prev"${w.cur===0?' disabled':''}>‹ 이전</button><span id="r-pos"></span><button id="r-next"${w.cur>=w.items.length-1?' disabled':''}>다음 ›</button></div></div>
+  ${card(it)}
+  ${nx?`<p class="note" style="text-align:center">다음 운동 · ${esc(nx.ex.name)}</p>`:`<p class="note" style="text-align:center">${edit?'마지막 종목이에요':allDone(w)?'모든 운동을 끝냈어요':'남은 운동은 이것뿐이에요'}</p>`}
+  <div style="height:90px"></div>`;
+ paintRunHead()}
+function paintRunHead(){if(V!=='run'||!W)return;const w=W,p=$('r-prog');if(!p)return;
+ p.innerHTML=w.items.map((it,i)=>`<i class="${exDone(it.ex,it.en)?'d':i===w.cur?'c':''}"></i>`).join('');
+ const dn=w.items.filter(it=>exDone(it.ex,it.en)).length;$('r-pos').textContent=(w.cur+1)+' / '+w.items.length+' · '+w.items[w.cur].ex.name;
+ $('r-sub').textContent=fmtDate(w.date)+' · 완료 '+dn+'/'+w.items.length;tickElapsed()}
+function tickElapsed(){const el=$('r-el');if(el&&W&&W.start)el.textContent=mmss((Date.now()-W.start)/1000)}
+setInterval(()=>{if(V==='run')tickElapsed()},1000);
+function cancelAdvance(){if(restNext!=null){restNext=null;restLabels();keepRest()}}
+function goItem(i){if(!W)return;closeKp();closeMemo();cancelAdvance();W.cur=Math.max(0,Math.min(W.items.length-1,i));save();openRest=null;openF=null;renderRun();window.scrollTo(0,0)}
+function afterDone(it){if(!W||W.status==='done'||V!=='run')return;const i=W.items.indexOf(it);
+ if(!exDone(it.ex,it.en)){if(it.ex.rest)startRest(restOf(it.ex),null);return}
+ const nx=nextIdx(W,i);
+ if(nx==null){stopRest();toast('모든 운동 완료!');beep(1318,0.15,3);setTimeout(()=>{if(V==='run'&&W&&allDone(W))go('finish')},900);return}
+ const r=restOf(it.ex);if(r)startRest(r,W.items[nx].u);else{const w=W;toast('다음 운동 · '+w.items[nx].ex.name);setTimeout(()=>{if(V==='run'&&W===w&&w.cur===i&&exDone(it.ex,it.en))goItem(nx)},900)}}
+$('v-run').addEventListener('click',e=>{const c=e.target.closest('[data-cell]');if(c){unlockAudio();openKp(c.dataset.u,+c.dataset.i,c.dataset.k);return}
+ const b=e.target.closest('button');if(!b)return;unlockAudio();
+ if(b.id!=='r-end')endArm=false;
+ if(b.id==='r-list'){go('plan');return}
+ if(b.id==='r-prev'){goItem(W.cur-1);return}
+ if(b.id==='r-next'){goItem(W.cur+1);return}
+ if(b.id==='r-end'){if(W.status==='done'){W.prs=prsFor(W).map(p=>({txt:p.txt,d:p.d}));save();go('detail');return}if(!endArm&&!allDone(W)){endArm=true;$('r-end').textContent='정말 끝내기';$('r-end').classList.add('arm');return}endArm=false;stopRest();go('finish');return}
+ if(!b.dataset.act)return;const it=item(b.dataset.u);if(!it)return;const ex=it.ex,en=it.en,i=+b.dataset.i,act=b.dataset.act;
+ if(act==='exmemo'){if(openMemo===it.u){closeMemo();refresh(it);return}closeMemo();openMemo=it.u;refresh(it);
+  const ta=$('v-run').querySelector('[data-exmemo]');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+ if(act==='d3'){closeKp();const v=b.dataset.v,seq=FLOW3D_SEQ[v];const st=b.dataset.p?Math.max(0,seq.indexOf(b.dataset.p)):0;if(window.open3D)window.open3D(seq,st,'루틴 '+v,!b.dataset.p);return}
+ const ck=b.dataset.ck||ex.id;if(act!=='clip-del')clipDelArm=null;
+ if(act==='clip-add'){clipFor={ck,u:it.u};const f=$('clipfile');f.value='';f.click();return}
+ if(act==='clip-toggle'){const v=clipView(ck);setClipView(ck,{open:!v.open});refresh(it);return}
+ if(act==='clip-z'){const v=clipView(ck);setClipView(ck,{z:Math.min(4,Math.max(1,+(v.z+(+b.dataset.d)).toFixed(2)))});updClip(it,ck);return}
+ if(act==='clip-y'){const v=clipView(ck);setClipView(ck,{y:Math.min(50,Math.max(-50,v.y+(+b.dataset.d)))});updClip(it,ck);return}
+ if(act==='clip-del'){if(clipDelArm!==ck){clipDelArm=ck;refresh(it);return}clipDelArm=null;delClip(ck).then(()=>refresh(it));return}
+ if(act==='fedit'){openF=openF===it.u?null:it.u;refresh(it);return}
+ if(act==='fadj'){const v=en.variant==='B'?'B':'A',key=(v==='B'?'b':'a')+(b.dataset.f==='n'?'N':'R'),c=fcfg(ex,v);
+  const cur0=b.dataset.f==='n'?c.n:c.reps,lim=b.dataset.f==='n'?[1,10]:[1,30];const nv=Math.min(lim[1],Math.max(lim[0],cur0+(+b.dataset.d)));
+  if(b.dataset.f==='n'&&nv<en.sets.filter(x=>x.done).length){toast('완료한 세트보다 적게 줄일 수 없어요');return}
+  /* 지난 기록을 고칠 때는 루틴 목표까지 바꾸지 않음 */
+  ex[key]=nv;const ref=W.status==='done'?null:routineDefRef(ex.id)||(db.routines?null:(ensureEditable(),routineDefRef(ex.id)));if(ref)ref[key]=nv;fixFlow(ex,en);save();refresh(it);return}
+ if(act==='hmode'){const st=settings();st.holdMax=st.holdMax||{};if(b.dataset.m==='max')st.holdMax[ex.id]=true;else delete st.holdMax[ex.id];save();refresh(it);return}
+ if(act==='restedit'){openRest=openRest===it.u?null:it.u;refresh(it);return}
+ if(act==='restadj'){const st=settings();st.rest=st.rest||{};st.rest[ex.id]=Math.min(600,Math.max(10,restOf(ex)+(+b.dataset.d)));save();refresh(it);return}
+ if(act==='restreset'){if(db.settings&&db.settings.rest)delete db.settings.rest[ex.id];save();refresh(it);return}
+ /* 오늘만 세트 수 바꾸기 (루틴은 그대로). 좌우 종목은 한 쌍씩. 완료한 세트는 지우지 않음 */
+ if(act==='setn'){const d=+b.dataset.d,n0=ex.n||3,nv=Math.min(10,Math.max(1,n0+d));if(nv===n0)return;
+  if(nSets(Object.assign({},ex,{n:nv}))<en.sets.filter(x=>x.done).length){toast('완료한 세트는 지울 수 없어요');return}
+  if(d>0&&restW===W.id)cancelAdvance();ex.n=nv;resizeEntry(it);save();refresh(it);return}
+ if(act==='ck'){closeKp();const s=en.sets[i];
+  if(!s.done){if(ex.type==='hold'&&!s.s)s.s=String(ex.target);if(ex.type!=='hold'&&!s.r)s.r=defReps(it,i);s.done=true;s.t=Date.now();save();refresh(it);checkPR(it);afterDone(it)}
+  else{s.done=false;delete s.t;if(restW===W.id)cancelAdvance();save();refresh(it)}}
+ else if(act==='sug'){en.sets.forEach(s=>{if(!s.done)s.w=b.dataset.w});save();refresh(it)}
+ else if(act==='toggle'){en.done=!en.done;if(en.done)en.t=Date.now();else{delete en.t;if(restW===W.id)cancelAdvance()}if(ex.type==='emom'&&en.done&&!en.rounds)en.rounds=ex.rounds;if(ex.type==='emom'&&!en.done)en.rounds=0;save();refresh(it);if(en.done)afterDone(it)}
+ else if(act==='var'){if(b.dataset.v===en.variant)return;if(en.sets.some(s=>s.done)){toast('완료한 세트가 있어서 루틴을 바꿀 수 없어요. 세트 완료를 먼저 풀어 주세요');return}en.variant=b.dataset.v;fixFlow(ex,en);save();refresh(it)}
+ else if(act==='hold'){closeKp();stopRest();openTimer({mode:'hold',u:it.u,i,title:ex.name+(ex.sides?(i%2?' · 오른쪽':' · 왼쪽'):' · '+(i+1)+'세트'),target:ex.target,max:holdMax(ex)})}
+ else if(act==='emom'){closeKp();stopRest();openTimer({mode:'emom',u:it.u,title:ex.name,rounds:ex.rounds,reps:ex.reps})}
+ else if(act==='clock'){closeKp();stopRest();openTimer({mode:'clock',u:it.u,title:ex.name,dur:ex.min*60})}});
+
+/* ---------- 운동 끝 ---------- */
+function memoCard(w){const m=w.memo||{};
+ const sc=(k,v)=>`<div class="scale" role="group">${[1,2,3,4,5].map(n=>`<button class="${v===n?'on':''}" data-act="memo-${k}" data-v="${n}" aria-pressed="${v===n}">${n}</button>`).join('')}</div>`;
+ return `<article class="ex memo" id="card-memo"><header><h3>컨디션</h3><span class="note">운동 후 기록</span></header>
+ <div class="q"><span>수면 <small>1 나쁨 · 5 좋음</small></span>${sc('sleep',m.sleep)}</div>
+ <div class="q"><span>피로 <small>1 가뿐 · 5 지침</small></span>${sc('fatigue',m.fatigue)}</div>
+ <div><div class="note" style="margin-bottom:6px">불편한 곳</div><div class="chips">${PAINS.map(p=>`<button class="${(m.pain||[]).includes(p)?'on':''}" data-act="memo-pain" data-v="${p}" aria-pressed="${(m.pain||[]).includes(p)}">${p}</button>`).join('')}</div></div>
+ <textarea id="memo-text" placeholder="예: 데드 마지막 세트 허리 뻐근, 스윙 그립 약함" aria-label="메모">${esc(m.text||'')}</textarea></article>`}
+function memoClick(b,w,rer){const m=w.memo=w.memo||{},k=b.dataset.act.slice(5),v=b.dataset.v;
+ if(k==='pain'){m.pain=m.pain||[];m.pain=m.pain.includes(v)?m.pain.filter(x=>x!==v):m.pain.concat(v)}else{m[k]=m[k]===+v?undefined:+v}save();rer()}
+function summKV(w){const s=wStats(w);return `<div class="kv"><div><small>운동 시간</small><b>${s.mins!=null?s.mins:'–'}</b>${s.mins!=null?'분':''}</div><div><small>완료 종목</small><b>${s.full}</b>/${w.items.length}</div><div><small>완료 세트</small><b>${s.sets}</b></div><div><small>총 볼륨</small><b>${s.vol?Math.round(s.vol).toLocaleString():'–'}</b>${s.vol?'kg':''}</div></div>`}
+let finDel=false;
+function renderFinish(){const w=W;if(w.status!=='done'&&w.start&&!w.end)w.end=Date.now();/* 메모 쓰는 시간은 운동 시간에서 뺌 */const pr=prsFor(w),left=w.items.filter(it=>!exDone(it.ex,it.en)),any=w.items.some(it=>hasDone(it.en));
+ $('v-finish').innerHTML=`<div class="appbar"><button class="back" id="f-back" aria-label="운동으로 돌아가기">‹</button><div class="ttl"><b>운동 끝</b><small>${esc(w.name)}</small></div></div>
+ <article class="ex summ">${summKV(w)}${pr.length?'<ul class="prs">'+pr.map(p=>'<li>'+esc(p.txt)+' ('+esc(p.d)+')</li>').join('')+'</ul>':''}
+ ${left.length?`<p class="note">완료하지 않은 종목 ${left.length}개: ${left.map(it=>esc(it.ex.name)).join(', ')}. 저장하면 완료한 세트만 기록으로 남아요.</p>`:''}</article>
+ ${memoCard(w)}
+ ${any?`<button class="big" id="f-save" style="height:52px;border-radius:14px">기록 저장</button>`:`<p class="note">완료한 세트가 없어서 저장할 기록이 없어요.</p>`}
+ <div class="row"><button class="ghost" id="f-cont" style="flex:1">계속 운동하기</button><button class="ghost${finDel?' danger':''}" id="f-del" style="flex:1">${finDel?'정말 삭제':'기록 없이 삭제'}</button></div><div style="height:30px"></div>`}
+$('v-finish').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const w=W;if(b.id!=='f-del')finDel=false;
+ if(b.dataset.act&&b.dataset.act.startsWith('memo-')){memoClick(b,w,()=>{$('v-finish').querySelector('#card-memo').outerHTML=memoCard(w)});return}
+ if(b.id==='f-back'||b.id==='f-cont'){w.end=null;save();go('run');return}
+ if(b.id==='f-del'){if(!finDel){finDel=true;renderFinish();return}finDel=false;delete db.workouts[w.id];if(db.active===w.id)db.active=null;save();W=null;toast('운동을 삭제했어요');go('home');return}
+ if(b.id==='f-save'){w.status='done';w.end=w.start?w.end||Date.now():null;w.prs=prsFor(w).map(p=>({txt:p.txt,d:p.d}));if(db.active===w.id)db.active=null;save();stopRest();toast('기록을 저장했어요');go('detail')}});
+$('v-run').addEventListener('input',e=>{const t=e.target;if(!t.dataset||!t.dataset.exmemo||!W)return;const it=W.items.find(x=>x.u===t.dataset.exmemo);if(!it)return;
+ if(t.value.trim())it.en.memo=t.value;else delete it.en.memo;save()});
+$('v-finish').addEventListener('input',e=>{if(e.target.id==='memo-text'){W.memo=W.memo||{};W.memo.text=e.target.value;save()}});
+$('v-detail').addEventListener('input',e=>{if(e.target.id==='memo-text'){W.memo=W.memo||{};W.memo.text=e.target.value;save()}
+ const u=e.target.dataset&&e.target.dataset.dexmemo,it=u&&W&&W.items.find(x=>x.u===u);if(it){if(e.target.value.trim())it.en.memo=e.target.value;else delete it.en.memo;save()}});
+
+/* ---------- 기록: 달력 · 상세 ---------- */
+let calM=null,calSel=null;
+function renderRecord(){const t=today();if(!calM)calM=t.slice(0,7);if(!calSel)calSel=t;
+ const [y,m]=calM.split('-').map(Number),first=new Date(y,m-1,1),start=addDays(dstr(first),-first.getDay());
+ let h=`<div class="calhead"><button id="c-prev" aria-label="이전 달">‹</button><h3>${y}년 ${m}월</h3><button id="c-next" aria-label="다음 달">›</button></div><div class="cal2">`+DAYS.map((d,i)=>`<span class="h${i===0?' su':i===6?' sa':''}">${d}</span>`).join('');
+ const end=new Date(y,m,0);const cells=Math.ceil((first.getDay()+end.getDate())/7)*7;let cnt=0;
+ for(let i=0;i<cells;i++){const d=addDays(start,i),ws=wsOn(d).filter(w=>w.status==='done'),out=d.slice(0,7)!==calM,wd=i%7;if(!out&&ws.length)cnt++;
+  h+=`<button class="${out?'out':''}${d===t?' today':''}${d===calSel?' sel':''}${wd===0?' su':wd===6?' sa':''}" data-cd="${d}" aria-label="${fmtDate(d)}${ws.length?' 운동 '+ws.length+'회':''}"><span>${pdate(d).getDate()}</span><div class="dots">${ws.slice(0,3).map(w=>`<i style="--c:var(--${wcolor(w)})"></i>`).join('')}</div></button>`}
+ h+=`</div><div class="legend">${rkeys().map(k=>`<span><i style="background:var(--${rcolor(k)})"></i>${esc(RT()[k].name)}</span>`).join('')}<span><i style="background:var(--plate5)"></i>자유운동</span><span style="margin-left:auto">이번 달 ${cnt}일 운동</span></div>`;
+ $('calpanel').innerHTML=h;renderDay()}
+function wLines(w){const out=[];for(const it of w.items){const en=it.en,ex=it.ex;if(!hasDone(en))continue;
+ if(ex.type==='weight'&&en.sets){const st=en.sets.filter(x=>x.done);const ws=[...new Set(st.map(x=>x.w))];out.push(ex.name+' '+(ws.length===1?(ws[0]?ws[0]+'kg × ':'')+st.map(x=>x.r).join('/'):st.map(x=>x.w+'×'+x.r).join(' · ')))}
+ else if((ex.type==='reps'||ex.type==='flow')&&en.sets)out.push(ex.name+(ex.type==='flow'?' 루틴 '+en.variant:'')+' '+en.sets.filter(x=>x.done).map(x=>x.r).join('/')+'회');
+ else if(ex.type==='hold'&&en.sets)out.push(ex.name+' '+en.sets.filter(x=>x.done).map(x=>x.s).join('/')+'초');
+ else if(ex.type==='emom')out.push(ex.name+' '+en.rounds+'라운드');else out.push(ex.name+' 완료')}return out}
+function renderDay(){const d=calSel,ws=wsOn(d);
+ let h=`<div class="sech"><h3>${fmtDate(d)}</h3><span class="note">${ws.length?ws.length+'개 운동':''}</span></div>`;
+ h+=ws.length?ws.map(w=>{const s=wStats(w),ls=wLines(w);return `<button class="wcard" data-w="${w.id}" style="--c:var(--${wcolor(w)})"><span class="d">${esc(w.name)}<span>${w.start?hm(w.start):''}${s.mins?' · '+s.mins+'분':''}</span></span>${w.status!=='done'?'<span class="live">진행 중 · 눌러서 이어하기</span>':''}<ul>${ls.slice(0,4).map(l=>'<li>'+esc(l)+'</li>').join('')}${ls.length>4?`<li>외 ${ls.length-4}개</li>`:''}</ul></button>`}).join(''):'<div class="empty2">이 날은 기록이 없어요.</div>';
+ if(d<=today())h+=`<button class="ghost" id="d-add" style="width:100%">+ 이 날 운동 기록하기</button>`;
+ $('daypanel').innerHTML=h}
+$('v-record').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.id==='c-prev'||b.id==='c-next'){const [y,m]=calM.split('-').map(Number);const d=new Date(y,m-1+(b.id==='c-next'?1:-1),1);calM=dstr(d).slice(0,7);renderRecord();return}
+ if(b.dataset.cd){calSel=b.dataset.cd;if(calSel.slice(0,7)!==calM)calM=calSel.slice(0,7);renderRecord();return}
+ if(b.dataset.w){W=db.workouts[b.dataset.w];if(W.status==='done')go('detail');else go(W.status==='run'?'run':'plan');return}
+ if(b.id==='d-add'){if(calSel===today()){startNew(calSel,null);return}W=newWorkout(calSel,null);go('plan')}});
+let detDel=false,detMemo=false,detExMemo=null;
+function summText(w){const s=wStats(w),lines=[`${fmtDate(w.date)} ${w.name}${w.start?' ('+hm(w.start)+(w.end?'–'+hm(w.end):'')+')':''}`];
+ for(const l of wLines(w))lines.push('- '+l);
+ for(const it of w.items)if(it.en.memo)lines.push('- '+it.ex.name+' 메모: '+it.en.memo);
+ lines.push(`완료 세트 ${s.sets}${s.vol?' · 볼륨 '+Math.round(s.vol).toLocaleString()+'kg':''}${s.mins!=null?' · '+s.mins+'분':''}`);
+ for(const p of (w.prs||[]))lines.push('새 기록: '+p.txt+' ('+p.d+')');
+ const m=w.memo||{};if(m.sleep||m.fatigue||(m.pain||[]).length)lines.push([m.sleep?'수면 '+m.sleep+'/5':'',m.fatigue?'피로 '+m.fatigue+'/5':'',(m.pain||[]).length?'불편: '+m.pain.join(', '):''].filter(Boolean).join(' · '));
+ if(m.text)lines.push('메모: '+m.text);return lines.join('\n')}
+function renderDetail(){const w=W,m=w.memo||{};
+ let h=`<div class="appbar"><button class="back" id="dt-back" aria-label="기록으로">‹</button><div class="ttl"><b>${esc(w.name)}</b><small>${fmtDate(w.date)}${w.start?' · '+hm(w.start)+(w.end?'–'+hm(w.end):''):''}</small></div></div>`;
+ h+=`<article class="ex summ">${summKV(w)}${(w.prs||[]).length?'<ul class="prs">'+w.prs.map(p=>'<li>'+esc(p.txt)+' ('+esc(p.d)+')</li>').join('')+'</ul>':''}</article>`;
+ h+=w.items.map(it=>{const ex=it.ex,en=it.en;let rows='';
+  if(!hasDone(en))rows=`<li class="miss"><span class="n">·</span><span>안 함</span><span>–</span></li>`;
+  else if(en.sets)rows=en.sets.map((s,i)=>{const lab=ex.sides?(i%2?'우':'좌')+(Math.floor(i/2)+1):i+1;const val=ex.type==='weight'?(s.w||0)+'kg × '+(s.r||'-')+'회':ex.type==='hold'?(s.s||'-')+'초':(s.r||'-')+'회';return `<li class="${s.done?'':'miss'}"><span class="n">${lab}</span><span>${esc(val)}</span>${s.done?'<em>✓</em>':'<span>–</span>'}</li>`}).join('');
+  else rows=`<li><span class="n">·</span><span>${ex.type==='emom'?(en.rounds||0)+'/'+ex.rounds+' 라운드':en.done?'완료':'안 함'}</span>${hasDone(en)?'<em>✓</em>':''}</li>`;
+  const mem=en.memo||'',mui=detExMemo===it.u?`<div class="exmemo"><small>이 날 ${esc(ex.name)}에만 남는 메모</small><textarea data-dexmemo="${it.u}" rows="2" maxlength="500" placeholder="예: 그립이 미끄러짐, 왼쪽 무릎 시큰" aria-label="${esc(ex.name)} 메모">${esc(mem)}</textarea><button class="okb" data-dxm="${it.u}">확인</button></div>`
+   :mem?`<button class="daymemo" data-dxm="${it.u}" aria-label="${esc(ex.name)} 메모 고치기"><small>메모 ✎</small>${esc(mem)}</button>`:`<button class="addmemo" data-dxm="${it.u}">+ 메모</button>`;
+  return `<div class="dex"><header><h4>${esc(ex.name)}${ex.type==='flow'?' · 루틴 '+en.variant:''}</h4><span class="tgt">${ex.type==='flow'?fcfg(ex,en.variant).n+'×'+fcfg(ex,en.variant).reps+'회':exSummary(ex).split(' · 휴식')[0]}</span></header><ol>${rows}</ol>${mui}</div>`}).join('');
+ /* 컨디션은 상세에서도 고칠 수 있음 ('기록 수정'이나 지난 날짜 입력은 운동 끝 화면을 거치지 않음) */
+ if(detMemo)h+=memoCard(w)+`<button class="ghost sm" id="dt-memo-done" style="align-self:flex-start">컨디션 다 고쳤어요</button>`;
+ else if(!memoHas(m))h+=`<button class="ghost sm" id="dt-memo" style="align-self:flex-start">+ 컨디션 기록</button>`;
+ else h+=`<div class="panel"><div class="row" style="justify-content:space-between"><h3>컨디션</h3><button class="ghost sm" id="dt-memo">고치기</button></div><div class="memoview">${m.sleep?'<span>수면 '+m.sleep+'/5</span>':''}${m.fatigue?'<span>피로 '+m.fatigue+'/5</span>':''}${(m.pain||[]).length?'<span>불편한 곳: '+esc(m.pain.join(', '))+'</span>':''}${m.text?'<span>“'+esc(m.text)+'”</span>':''}</div></div>`;
+ h+=`<div class="danger-row"><button class="ghost" id="dt-edit">기록 수정</button><button class="ghost" id="dt-copy">요약 복사</button></div><span class="msg" id="dt-msg" style="min-height:0"></span>
+ <div class="danger-row"><button class="ghost" id="dt-again">이 운동 다시 하기</button><button class="ghost" id="dt-save">루틴으로 저장</button></div>
+ <button class="ghost${detDel?' danger':''}" id="dt-del">${detDel?'정말 삭제하기':'이 기록 삭제'}</button><div style="height:30px"></div>`;
+ $('v-detail').innerHTML=h}
+$('v-detail').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const w=W;if(b.id!=='dt-del')detDel=false;
+ if(b.dataset.act&&b.dataset.act.startsWith('memo-')){memoClick(b,w,()=>{$('v-detail').querySelector('#card-memo').outerHTML=memoCard(w)});return}
+ if(b.dataset.dxm){const it=w.items.find(x=>x.u===b.dataset.dxm);if(!it)return;const was=detExMemo;detExMemo=null;
+  for(const x of w.items)if(x.u===was&&x.en.memo!=null){const v=String(x.en.memo).trim();if(v)x.en.memo=v;else delete x.en.memo;save()}
+  if(was!==it.u){detExMemo=it.u;renderDetail();const ta=$('v-detail').querySelector('[data-dexmemo]');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}else renderDetail();return}
+ if(b.id==='dt-memo'){detMemo=true;renderDetail();const c=$('v-detail').querySelector('#card-memo');if(c)c.scrollIntoView({block:'center'});return}
+ if(b.id==='dt-memo-done'){detMemo=false;renderDetail();return}
+ if(b.id==='dt-back'){calSel=w.date;calM=w.date.slice(0,7);go('record');return}
+ if(b.id==='dt-edit'){w.cur=0;go('run');return}
+ if(b.id==='dt-copy'){copyText(summText(w),$('dt-msg'),null);return}
+ if(b.id==='dt-again'){const a=db.active&&db.workouts[db.active];if(a&&(a.status!=='plan'||a.items.some(it=>hasDone(it.en)))){toast('진행 중인 운동이 있어요. 먼저 끝내 주세요');return}if(a){delete db.workouts[a.id];db.active=null}const nw=newWorkout(today(),null);for(const it of w.items)addItem(nw,it.ex);nw.routine=w.routine;save();W=nw;go('plan');return}
+ if(b.id==='dt-save'){if(b.disabled)return;b.disabled=true;b.textContent='루틴으로 저장됨';ensureEditable();const k='r'+Date.now().toString(36);db.routines[k]={name:w.name.replace(/ 운동$/,'')+' 루틴',sub:'',color:w.routine?rcolor(w.routine):'yellow',ex:w.items.map(it=>clone(it.ex))};save();toast('루틴으로 저장했어요. 설정에서 이름을 바꿀 수 있어요');return}
+ if(b.id==='dt-del'){if(!detDel){detDel=true;renderDetail();return}detDel=false;delete db.workouts[w.id];save();toast('기록을 삭제했어요');calSel=w.date;W=null;go('record')}});
+
+/* ---------- 키패드 ---------- */
+let kp=null;
+const kpEl=$('kp');
+function kpStep(ex,k){if(k==='w'){const s=ex.inc||2.5;return[s,s*2>=5?s*2:5]}if(k==='s')return[5,10];return[1,5]}
+function kpItem(){return kp&&item(kp.u)}
+function openKp(u,i,k){const it=item(u);if(!it)return;const prev=kp;kp={u,i,k,fresh:true,all:false};
+ if(prev&&prev.u!==u){const pi=item(prev.u);if(pi)refresh(pi)}
+ refresh(it);kpEl.hidden=false;document.body.classList.add('kp-open');paintKp();
+ const c=$(u+'-'+i+'-'+k);if(c){const r=c.getBoundingClientRect(),limit=innerHeight-kpEl.offsetHeight-12;if(r.bottom>limit||r.top<0)window.scrollBy({top:r.bottom-limit+40})}}
+function closeKp(){if(!kp)return;const it=kpItem();kp=null;kpEl.hidden=true;document.body.classList.remove('kp-open');if(it)refresh(it)}
+function kpVal(){const it=kpItem();return String(it.en.sets[kp.i][kp.k]??'')}
+function kpLabel(ex){const lab=ex.sides?(kp.i%2?'오른쪽 ':'왼쪽 ')+(Math.floor(kp.i/2)+1):(kp.i+1)+'세트';return lab+' · '+({w:'무게',r:'횟수',s:'시간'}[kp.k])}
+function paintKp(){const it=kpItem(),ex=it.ex,v=kpVal(),[sm,bg]=kpStep(ex,kp.k),u={w:'kg',r:'회',s:'초'}[kp.k];
+ $('kp-ex').textContent=ex.name;$('kp-lbl').textContent=kpLabel(ex);
+ const n=$('kp-num');n.textContent=(v===''?'0':v)+' '+u;n.classList.toggle('fresh',kp.fresh&&v!=='');
+ $('kp-sm').textContent='−'+fmtN(sm);$('kp-sp').textContent='+'+fmtN(sm);$('kp-bm').textContent='−'+fmtN(bg);$('kp-bp').textContent='+'+fmtN(bg);
+ $('kp-dot').disabled=kp.k!=='w';
+ $('kp-one').className=kp.all?'':'on';$('kp-all').className=kp.all?'on':'';$('kp-one').setAttribute('aria-pressed',!kp.all);$('kp-all').setAttribute('aria-pressed',kp.all);
+ $('kp-plates').innerHTML=(kp.k==='w'&&ex.bar)?platesHTML(v,'한쪽 원판'):'';paintKpRest();
+ const c=$(kp.u+'-'+kp.i+'-'+kp.k);if(c){c.classList.add('editing');c.classList.toggle('fresh',kp.fresh)}}
+function paintKpRest(){const el=$('kp-rt');if(!el)return;const left=(restEnd-Date.now())/1000;el.textContent=restIv&&!$('rest').hidden?(left>0?'휴식 '+mmss(Math.ceil(left)):'휴식 끝'):''}
+function kpSet(v){const it=kpItem(),ex=it.ex,en=it.en;en.sets[kp.i][kp.k]=v;
+ if(kp.all)en.sets.forEach((s,j)=>{if(j!==kp.i&&!s.done)s[kp.k]=v});save();
+ const ids=kp.all?en.sets.map((_,j)=>j):[kp.i];
+ for(const j of ids){const c=$(kp.u+'-'+j+'-'+kp.k);if(c){const val=en.sets[j][kp.k];c.querySelector('.v,.ph').outerHTML=val!==''?'<span class="v">'+esc(val)+'</span>':'<span class="ph">'+phOf(it,j,kp.k)+'</span>'}}
+ /* 무게를 바꾸면 '지난번과 같은 무게인지'가 달라지므로 비어 있는 횟수 칸의 안내 숫자도 다시 계산 */
+ if(kp.k==='w')for(const j of ids){const c=$(kp.u+'-'+j+'-r'),ph=c&&c.querySelector('.ph');if(ph)ph.textContent=defReps(it,j)}
+ if(ex.bar&&kp.k==='w'){const cd=$('card-'+it.u);const old=cd&&cd.querySelector(':scope > .plates');const nx=en.sets.find(s=>!s.done)||en.sets[0];const h=nx&&nx.w?platesHTML(nx.w,'한쪽'):'';if(old)old.outerHTML=h||'<span hidden></span>';else if(h&&cd)cd.insertAdjacentHTML('beforeend',h)}
+ paintKp()}
+function kpCells(){const it=kpItem(),ex=it.ex,ks=ex.type==='weight'?['w','r']:ex.type==='hold'?['s']:['r'];const out=[];it.en.sets.forEach((_,i)=>ks.forEach(k=>out.push([i,k])));return out}
+function kpPress(k){if(!kp)return;const it=kpItem(),ex=it.ex;let v=kpVal();
+ if(/^[0-9]$/.test(k)){if(kp.fresh)v='';if(v==='0')v='';if(v.replace('.','').length<5)v+=k;kp.fresh=false;kpSet(v);return}
+ if(k==='.'){if(kp.k!=='w')return;if(kp.fresh)v='';if(!v.includes('.'))v=(v||'0')+'.';kp.fresh=false;kpSet(v);return}
+ if(k==='bs'){v=kp.fresh?'':v.slice(0,-1);kp.fresh=false;kpSet(v);return}
+ if(k==='s-'||k==='s+'||k==='b-'||k==='b+'){const [sm,bg]=kpStep(ex,kp.k);const st=k[0]==='s'?sm:bg;const base=num(v)||num(phOf(it,kp.i,kp.k));let n=Math.max(0,base+(k[1]==='+'?st:-st));kp.fresh=false;kpSet(fmtN(n));return}
+ if(k==='prev'||k==='next'){const cells=kpCells();const idx=cells.findIndex(([i,kk])=>i===kp.i&&kk===kp.k);const nx=cells[idx+(k==='next'?1:-1)];if(!nx)return;
+  const old=$(kp.u+'-'+kp.i+'-'+kp.k);if(old)old.classList.remove('editing','fresh');kp.i=nx[0];kp.k=nx[1];kp.fresh=true;kp.all=false;paintKp();return}
+ if(k==='ok')closeKp()}
+$('kp-grid').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)kpPress(b.dataset.k)});
+$('kp-one').addEventListener('click',()=>{if(!kp)return;kp.all=false;paintKp()});
+$('kp-all').addEventListener('click',()=>{if(!kp)return;kp.all=true;kpSet(kpVal())});
+document.addEventListener('click',e=>{if(!kp)return;if(e.target.closest('#kp')||e.target.closest('[data-cell]'))return;if(!document.body.contains(e.target))return;closeKp()},true);
+
+/* ---------- 통계 ---------- */
+let statEx=null;
+/* 한 운동에 같은 종목이 둘이면(종목 합치기 뒤 등) 세트를 모아 한 점으로 봄 */
+function exHistory(id){const out=[];for(const w of doneWs()){const its=w.items.filter(it=>it.ex.id===id&&hasDone(it.en));if(!its.length)continue;
+ const ex=its[its.length-1].ex,en=its.length===1?its[0].en:{sets:its.some(it=>it.en.sets)?its.flatMap(it=>it.en.sets||[]):undefined,rounds:Math.max(0,...its.map(it=>it.en.rounds||0)),memo:its.map(it=>it.en.memo).filter(Boolean).join(' / ')||undefined};{
+ if(ex.type==='weight'&&en.sets){const st=en.sets.filter(x=>x.done&&num(x.w)>0);if(!st.length)continue;const top=Math.max(...st.map(x=>num(x.w)));const ee=Math.max(...st.map(e1));out.push({t:'weight',d:w.date,v1:top,v2:+ee.toFixed(1),reps:st.map(x=>x.r).join('/'),memo:en.memo})}
+ else if((ex.type==='reps'||ex.type==='flow')&&en.sets){const st=en.sets.filter(x=>x.done);out.push({t:ex.type,d:w.date,v1:st.reduce((a,x)=>a+num(x.r),0),memo:en.memo})}
+ else if(ex.type==='hold'&&en.sets){const st=en.sets.filter(x=>x.done);out.push({t:'hold',d:w.date,v1:Math.max(0,...st.map(x=>num(x.s))),memo:en.memo})}
+ else if(ex.type==='emom')out.push({t:'emom',d:w.date,v1:en.rounds||0,memo:en.memo})}}
+ /* 기록 방식을 바꾼 종목은 kg과 횟수가 한 선에 섞이지 않게 마지막 방식의 기록만 씀 */
+ const ty=out.length?out[out.length-1].t:null;return out.filter(p=>p.t===ty)}
+function statable(){const ids=[];for(const g of library())for(const ex of g.items)if(['weight','reps','hold','emom','flow'].includes(ex.type)&&!ids.includes(ex.id))ids.push(ex.id);
+ for(const w of doneWs())for(const it of w.items)if(['weight','reps','hold','emom','flow'].includes(it.ex.type)&&!ids.includes(it.ex.id))ids.push(it.ex.id);
+ return ids.filter(id=>exHistory(id).length)}
+function exName(id){const d=findDef(id);if(d)return d.name;for(const w of doneWs())for(const it of w.items)if(it.ex.id===id)return it.ex.name;return id}
+function renderStats(){render100();const ids=statable(),pk=$('picker'),box=$('chartbox');
+ if(!ids.length){pk.innerHTML='';box.innerHTML='<div class="empty">무게나 횟수를 기록하면 종목별 그래프가 생겨요.</div>';return}
+ if(!ids.includes(statEx))statEx=ids[0];pk.innerHTML=ids.map(id=>`<button class="${id===statEx?'on':''}" data-sx="${id}">${esc(exName(id))}</button>`).join('');drawChart()}
+$('picker').addEventListener('click',e=>{const b=e.target.closest('[data-sx]');if(!b)return;statEx=b.dataset.sx;renderStats()});
+function niceTicks(lo,hi,minSt){if(lo===hi){lo=lo-(minSt?2:1);hi=hi+(minSt?2:1)}const span=hi-lo,raw=span/4,mag=Math.pow(10,Math.floor(Math.log10(raw)));let st=[1,2,2.5,5,10].map(x=>x*mag).find(x=>x>=raw);if(minSt&&st<minSt)st=minSt;if(minSt&&st%1)st=Math.ceil(st);const a=Math.floor(lo/st)*st,b=Math.ceil(hi/st)*st;const t=[];for(let v=a;v<=b+1e-9;v+=st)t.push(+v.toFixed(2));return t}
+function drawChart(){const pts=exHistory(statEx),ty=pts[0].t,box=$('chartbox'),nm=exName(statEx);
+ const unit={weight:'kg',reps:'회',hold:'초',emom:'라운드',flow:'회'}[ty],two=ty==='weight';
+ const name1={weight:'세트 최고 무게',reps:'총 횟수',hold:'최고 버티기',emom:'완료 라운드',flow:'총 횟수'}[ty];
+ const Wd=Math.max(280,box.clientWidth||320),H=200,pl=40,pr=12,pt=14,pb=26;
+ const vals=pts.flatMap(p=>two?[p.v1,p.v2]:[p.v1]);const ticks=niceTicks(Math.min(...vals),Math.max(...vals),two?0:1);const y0=ticks[0],y1=ticks[ticks.length-1];
+ const X=i=>pts.length===1?(pl+(Wd-pl-pr)/2):pl+i*(Wd-pl-pr)/(pts.length-1),Y=v=>pt+(H-pt-pb)*(1-(v-y0)/(y1-y0||1));
+ let s=`<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${esc(nm)} ${name1} 추이">`;
+ for(const t of ticks)s+=`<line class="grid" x1="${pl}" x2="${Wd-pr}" y1="${Y(t)}" y2="${Y(t)}"/><text class="ax" x="${pl-6}" y="${Y(t)+4}" text-anchor="end">${fmtN(t)}</text>`;
+ const xl=pts.length<=3?pts.map((_,i)=>i):[0,Math.floor((pts.length-1)/2),pts.length-1];
+ for(const i of xl)s+=`<text class="ax" x="${X(i)}" y="${H-6}" text-anchor="${pts.length>1&&i===0?'start':pts.length>1&&i===pts.length-1?'end':'middle'}">${fmtDate(pts[i].d,true)}</text>`;
+ if(two&&pts.length>1)s+=`<polyline class="s2" points="${pts.map((p,i)=>X(i)+','+Y(p.v2)).join(' ')}"/>`;
+ if(pts.length>1)s+=`<polyline class="s1" points="${pts.map((p,i)=>X(i)+','+Y(p.v1)).join(' ')}"/>`;
+ if(two)pts.forEach((p,i)=>{if(pts.length<=12||i===pts.length-1)s+=`<circle class="p2" cx="${X(i)}" cy="${Y(p.v2)}" r="4"/>`});
+ pts.forEach((p,i)=>{if(pts.length<=12||i===pts.length-1)s+=`<circle class="p1" cx="${X(i)}" cy="${Y(p.v1)}" r="4.5"/>`});
+ s+=`<line class="cross" id="cx" x1="0" x2="0" y1="${pt}" y2="${H-pb}" visibility="hidden"/><rect id="hit" x="${pl}" y="0" width="${Wd-pl-pr}" height="${H}" fill="transparent"/></svg>`;
+ const lg=two?`<div class="legend"><span><i style="background:var(--ink)"></i>${name1}</span><span><i style="background:var(--red)"></i>추정 1RM (점선)</span></div>`:'';
+ const rows=pts.slice(-6).reverse().map(p=>`<tr${p.memo?' class="hasm"':''}><td>${fmtDate(p.d,true)}</td><td>${fmtN(p.v1)}${unit}${p.reps?' × '+p.reps:''}</td>${two?'<td>'+fmtN(p.v2)+'kg</td>':''}</tr>${p.memo?`<tr class="mrow"><td colspan="${two?3:2}">“${esc(p.memo)}”</td></tr>`:''}`).join('');
+ const first=pts[0],lastp=pts[pts.length-1],dlt=lastp.v1-first.v1;
+ const summ=pts.length>1?`<p>${fmtDate(first.d,true)} ${fmtN(first.v1)}${unit} → ${fmtDate(lastp.d,true)} ${fmtN(lastp.v1)}${unit} (${dlt>=0?'+':''}${fmtN(dlt)}${unit}, ${pts.length}회 기록)</p>`:'<p>기록이 2번 이상 쌓이면 선으로 이어져요.</p>';
+ box.innerHTML=`${lg}${summ}<div class="chart" id="chart">${s}<div class="tip" id="tip" hidden></div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>날짜</th><th>${name1}</th>${two?'<th>추정 1RM</th>':''}</tr></thead><tbody>${rows}</tbody></table></div>`;
+ const svg=box.querySelector('svg'),tip=$('tip'),cx=$('cx');
+ const show=ev=>{const r=svg.getBoundingClientRect(),sx=(ev.clientX-r.left)*Wd/r.width;let bi=0,bd=1e9;pts.forEach((p,i)=>{const dd=Math.abs(X(i)-sx);if(dd<bd){bd=dd;bi=i}});const p=pts[bi];
+  cx.setAttribute('x1',X(bi));cx.setAttribute('x2',X(bi));cx.setAttribute('visibility','visible');
+  tip.hidden=false;tip.innerHTML=`${fmtDate(p.d)}<br>${name1} ${fmtN(p.v1)}${unit}${p.reps?' × '+p.reps:''}${two?'<br>추정 1RM '+fmtN(p.v2)+'kg':''}${p.memo?'<br>“'+esc(p.memo.length>40?p.memo.slice(0,40)+'…':p.memo)+'”':''}`;
+  const px=X(bi)*r.width/Wd,py=Y(two?Math.max(p.v1,p.v2):p.v1)*r.height/H-10,hw=Math.min(tip.offsetWidth/2,r.width/2);tip.style.left=Math.min(Math.max(px,hw),r.width-hw)+'px';tip.style.top=Math.max(py,40)+'px'};
+ /* 터치는 손을 떼도 말풍선을 남기고, 그래프 밖을 누르면 닫음 */
+ svg.addEventListener('pointermove',show);svg.addEventListener('pointerdown',show);svg.addEventListener('pointerleave',ev=>{if(ev.pointerType==='mouse')hideTip()})}
+function hideTip(){const t=$('tip'),c=$('cx');if(t)t.hidden=true;if(c)c.setAttribute('visibility','hidden')}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#chart'))hideTip()});
+function render100(){const el=$('p100'),ch=db.challenge;
+ if(!ch||!ch.start){el.innerHTML=`<h3>내 몸 100일</h3><p>시작일을 정하면 며칠째인지, 시작 때보다 무엇이 달라졌는지 정리해 줘요.</p><div class="row"><button class="ghost sm ok" id="c-today">오늘부터 시작</button><input type="date" id="c-date" aria-label="100일 시작일" style="font-size:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px"><button class="ghost sm" id="c-set">이 날짜로 시작</button></div>`;return}
+ const t=today(),n=daysBetween(ch.start,t)+1,end=addDays(ch.start,99),to=t<end?t:end;
+ const ws=doneWs().filter(w=>w.date>=ch.start&&w.date<=to),days=new Set(ws.map(w=>w.date));
+ let sets=0;const sl=[],fa=[];for(const w of ws){sets+=wStats(w).sets;const m=w.memo||{};if(m.sleep)sl.push(m.sleep);if(m.fatigue)fa.push(m.fatigue)}
+ const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1):'–';
+ const chg=[];for(const id of statable()){const h=exHistory(id).filter(p=>p.t==='weight'&&p.d>=ch.start&&p.d<=to);if(!h.length)continue;chg.push({id,name:exName(id),a:h[0].v1,b:h[h.length-1].v1})}
+ const label=n<1?'D−'+(1-n):n>100?'완주':'D+'+n,pct=Math.max(0,Math.min(100,n));
+ el.innerHTML=`<div class="row" style="justify-content:space-between"><h3>내 몸 100일</h3><button class="ghost sm" id="c-edit">시작일 변경</button></div>
+ <div class="d100"><b>${label}</b><span>${fmtDate(ch.start,true)} 시작 · ${fmtDate(end,true)} 종료</span></div>
+ <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+ <div class="kv"><div><small>운동한 날</small><b>${days.size}</b>일</div><div><small>완료 세트</small><b>${sets}</b>세트</div><div><small>평균 수면</small><b>${avg(sl)}</b>/5</div><div><small>평균 피로</small><b>${avg(fa)}</b>/5</div></div>
+ ${chg.length?'<ul class="chg">'+chg.map(c=>{const d=c.b-c.a;return `<li><span>${esc(c.name)}</span><span>${fmtN(c.a)} → ${fmtN(c.b)}kg <em class="${d<0?'dn':''}">${d>=0?'+':''}${fmtN(d)}</em></span></li>`}).join('')+'</ul>':'<p>기간 안에 무게 기록이 쌓이면 시작 대비 변화가 여기에 보여요.</p>'}
+ <div class="row"><button class="ghost sm" id="c-copy">요약 복사</button><span class="msg" id="c-msg"></span></div>
+ <div class="row" id="c-editrow" hidden><input type="date" id="c-date" value="${ch.start}" aria-label="새 시작일" style="font-size:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px"><button class="ghost sm" id="c-set">변경</button><button class="ghost sm danger" id="c-clear">100일 기록 끄기</button></div>`;
+ el._summary=[`내 몸 100일 · ${label} (${ch.start} 시작)`,`운동한 날 ${days.size}일 · 완료 세트 ${sets}세트`,`평균 수면 ${avg(sl)}/5 · 평균 피로 ${avg(fa)}/5`,...chg.map(c=>`${c.name}: ${fmtN(c.a)}kg → ${fmtN(c.b)}kg (${c.b-c.a>=0?'+':''}${fmtN(c.b-c.a)})`)].join('\n')}
+$('p100').addEventListener('click',e=>{const id=e.target.id,el=$('p100');
+ if(id==='c-today'){db.challenge={start:today()};save();render100()}
+ else if(id==='c-set'){const v=$('c-date').value;if(v){db.challenge={start:v};save();render100()}}
+ else if(id==='c-edit'){$('c-editrow').hidden=!$('c-editrow').hidden}
+ else if(id==='c-clear'){delete db.challenge;save();render100()}
+ else if(id==='c-copy'){copyText(el._summary,$('c-msg'),null)}});
+
+/* ---------- 설정 ---------- */
+let edR=null,edIdx=null,delArm=null,resetArm=false,rDelArm=false,draft=null,cuDel=null,edDup=null;
+function renderSet(){const R=RT();if(!edR||!R[edR])edR=rkeys()[0];const r=R[edR];
+ let h=`<h3>루틴 편집</h3><div class="chips" role="group">${rkeys().map(k=>`<button class="${k===edR?'on':''}" data-er="${k}">${esc(R[k].name)}</button>`).join('')}<button data-er="__new">+ 새 루틴</button></div>`;
+ if(r){h+=`<div class="form" style="background:none;padding:0"><label>루틴 이름<input id="ed-rname" value="${esc(r.name)}"></label><label>설명<input id="ed-rsub" value="${esc(r.sub||'')}"></label><label class="w2">색<div class="cgrid">${COLORS.map(c=>`<button class="${rcolor(edR)===c?'on':''}" data-rc="${c}" style="--c:var(--${c})" aria-label="${c}"></button>`).join('')}</div></label></div>
+ <div class="edlist">${r.ex.map((ex,i)=>edIdx===i?exForm(draft||ex,'ed',{type:ex.type!=='flow'}):`<div class="edrow"><div><b>${esc(ex.name)}</b><small>${TYPES[ex.type]} · ${exSummary(ex)}</small></div><div class="acts"><button data-ed="up" data-i="${i}" aria-label="위로"${i===0?' disabled':''}>↑</button><button data-ed="down" data-i="${i}" aria-label="아래로"${i===r.ex.length-1?' disabled':''}>↓</button><button data-ed="edit" data-i="${i}" aria-label="수정">✎</button><button data-ed="del" data-i="${i}" aria-label="삭제" style="${delArm===i?'background:var(--red);color:#fff;border-color:var(--red)':''}">${delArm===i?'확인':'✕'}</button></div></div>`).join('')}${edIdx===r.ex.length?exForm(draft,'ed',{type:true})+(edDup?dupBox(edDup):''):''}${!r.ex.length&&edIdx==null?'<div class="empty2">아직 종목이 없어요. 아래에서 추가하세요.</div>':''}</div>
+ <div class="row"><button class="ghost sm" data-ed="add">+ 종목 추가</button><button class="ghost sm" data-ed="lib">목록에서 고르기</button><button class="ghost sm${rDelArm?' danger':''}" data-ed="rdel">${rDelArm?'정말 루틴 삭제':'루틴 삭제'}</button></div>
+ ${edIdx==='lib'?`<div class="sheet">${library().map(g=>`<div class="libg"><h4 style="--c:var(--${g.c})"><i></i>${esc(g.name)}</h4>${g.items.map(e=>`<button class="libitem" data-libadd="${e.id}"><span><b>${esc(e.name)}</b><small>${TYPES[e.type]} · ${exSummary(e)}</small></span><em>${r.ex.some(x=>x.id===e.id)?'있음':'+ 추가'}</em></button>`).join('')}</div>`).join('')}<button class="ghost sm" data-ed="libclose">닫기</button></div>`:''}
+ <p>종목을 지우거나 바꿔도 지난 기록은 그대로 남아요.</p><button class="ghost sm${resetArm?' danger':''}" data-ed="reset" style="align-self:flex-start">${resetArm?'정말 기본 루틴으로 되돌리기':'기본 루틴으로 되돌리기'}</button>`}
+ $('p-routine').innerHTML=h;
+ const map=DMAP();
+ $('p-days').innerHTML=`<h3>요일별 추천 루틴</h3><p>홈의 '오늘의 추천'에 보여 줄 루틴이에요. 운동은 언제든 다른 루틴으로 시작할 수 있어요.</p><div class="dmap">${ORDER.map(d=>`<label>${DAYS[d]}<select id="dm-${d}" data-dm="${d}"><option value="X"${map[d]==='X'?' selected':''}>휴식</option>${rkeys().map(k=>`<option value="${k}"${map[d]===k?' selected':''}>${esc(R[k].name)}</option>`).join('')}</select></label>`).join('')}</div>`;
+ const cu=db.custom||[];
+ $('p-custom').innerHTML=`<h3>내가 만든 종목</h3>${cu.length?'<div class="edlist">'+cu.map(e=>`<div class="edrow"><div><b>${esc(e.name)}</b><small>${TYPES[e.type]} · ${exSummary(e)}</small></div><div class="acts"><button data-cud="${e.id}" aria-label="삭제" style="${cuDel===e.id?'background:var(--red);color:#fff;border-color:var(--red)':''}">${cuDel===e.id?'확인':'✕'}</button></div></div>`).join('')+'</div>':'<p>운동 준비 화면에서 \'새 종목 만들기\'로 만든 종목이 여기에 모여요.</p>'}`;
+ const bw=barW(),pa=platesAvail();
+ $('p-plates').innerHTML=`<h3>원판 설정</h3><p>바벨 종목을 입력할 때 한쪽에 끼울 원판을 계산해요.</p><div class="form" style="background:none;padding:0"><label>빈 봉 무게(kg)<input id="pl-bar" type="number" inputmode="decimal" step="any" value="${bw}"></label></div><div class="chips" role="group" aria-label="가진 원판">${ALL_PLATES.map(p=>`<button class="${pa.includes(p)?'on':''}" data-pl="${p}" aria-pressed="${pa.includes(p)}">${fmtN(p)}kg</button>`).join('')}</div>`;
+ renderMerge();
+ $('exp').value=JSON.stringify(db);paintBk()}
+/* 종목 폼이 열린 채 다른 칸을 바꿔 다시 그려도 입력하던 값이 남게 함 */
+function keepDraft(){if(typeof edIdx==='number'&&$('ed-name'))draft=readExForm('ed',draft||{})}
+$('v-set').addEventListener('change',e=>{const t=e.target;if(t.id!=='ed-type')keepDraft();
+ if(t.id==='ed-type'){draft=Object.assign(readExForm('ed',draft||{}),{type:t.value});renderSet()}
+ else if(t.dataset.dm!=null){ensureEditable();db.dayMap[t.dataset.dm]=t.value;save()}
+ else if(t.id==='ed-rname'||t.id==='ed-rsub'){ensureEditable();const k=t.id==='ed-rname'?'name':'sub';db.routines[edR][k]=t.value.trim()||(k==='sub'?'':db.routines[edR][k]);save();renderSet()}
+ else if(t.id==='pl-bar'){const v=num(t.value);if(v>=0){settings().bar=v;save();renderSet()}}});
+$('v-set').addEventListener('click',e=>{const b=e.target.closest('[data-er],[data-ed],[data-pl],[data-rc],[data-fs],[data-fc],[data-libadd],[data-cud],[data-dup]');if(!b)return;if(!b.dataset.fs&&!b.dataset.fc)keepDraft();
+ if(b.dataset.cud){if(cuDel!==b.dataset.cud){cuDel=b.dataset.cud;renderSet();return}db.custom=(db.custom||[]).filter(x=>x.id!==cuDel);cuDel=null;save();renderSet();return}
+ cuDel=null;
+ if(b.dataset.er){if(b.dataset.er==='__new'){ensureEditable();const k='r'+Date.now().toString(36);db.routines[k]={name:'새 루틴',sub:'',color:COLORS[rkeys().length%4],ex:[]};save();edR=k}else edR=b.dataset.er;edIdx=null;draft=null;delArm=null;rDelArm=false;renderSet();return}
+ if(b.dataset.pl){const p=+b.dataset.pl,st=settings();let pa=platesAvail().slice();pa=pa.includes(p)?pa.filter(x=>x!==p):pa.concat(p);st.plates=pa.sort((a,c)=>c-a);save();renderSet();return}
+ if(b.dataset.rc){ensureEditable();db.routines[edR].color=b.dataset.rc;save();renderSet();return}
+ if(b.dataset.libadd){ensureEditable();const d=findDef(b.dataset.libadd);if(d&&!db.routines[edR].ex.some(x=>x.id===d.id)){db.routines[edR].ex.push(clone(d));save();renderSet()}return}
+ if(b.dataset.fs==='ed'||b.dataset.dup){ensureEditable();const list=db.routines[edR].ex,o=restSave(readExForm('ed',draft),draft),isNew=edIdx>=list.length,prev=isNew?null:list[edIdx];
+  if(b.dataset.dup==='use'){const d=exDef(edDup);edDup=null;if(d){if(list.some(x=>x.id===d.id))toast(jo(d.name,'은','는')+' 이미 이 루틴에 있어요');else{list.push(clone(d));toast(d.name+' 추가')}}edIdx=null;draft=null;save();renderSet();return}
+  const force=b.dataset.dup==='new';edDup=null;
+  /* 새로 만드는데 이름이 같은 종목이 있으면 기존 종목을 쓸지 먼저 물음 */
+  if(isNew&&!force){const d=sameName(o.name,o.id);if(d){draft=o;edDup=d.id;renderSet();const x=$('p-routine').querySelector('.dupask');if(x)x.scrollIntoView({block:'center'});return}}
+  if(isNew)list.push(o);else list[edIdx]=o;edIdx=null;draft=null;save();renderSet();
+  if(prev&&nkey(prev.name)!==nkey(o.name)&&sameName(o.name,o.id))toast(DUP_TIP);return}
+ if(b.dataset.fc==='ed'){edIdx=null;draft=null;edDup=null;renderSet();return}
+ const a=b.dataset.ed,i=+b.dataset.i;if(!a)return;
+ if(a!=='del')delArm=null;if(a!=='reset')resetArm=false;if(a!=='rdel')rDelArm=false;
+ if(a==='edit'){edDup=null;edIdx=i;draft=clone(RT()[edR].ex[i]);renderSet()}
+ else if(a==='add'){edDup=null;edIdx=RT()[edR].ex.length;draft={id:'x'+Date.now().toString(36),name:'',type:'weight',n:3,lo:8,hi:10,inc:2.5,rest:90};renderSet();const nm=$('ed-name');if(nm)nm.focus()}
+ else if(a==='lib'){edIdx='lib';renderSet()}
+ else if(a==='libclose'){edIdx=null;renderSet()}
+ else if(a==='up'||a==='down'){ensureEditable();const list=db.routines[edR].ex,j=a==='up'?i-1:i+1;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];if(edIdx===i)edIdx=j;else if(edIdx===j)edIdx=i;save();renderSet()}
+ else if(a==='del'){if(delArm!==i){delArm=i;renderSet();return}ensureEditable();db.routines[edR].ex.splice(i,1);delArm=null;edIdx=null;save();renderSet()}
+ else if(a==='rdel'){if(!rDelArm){rDelArm=true;renderSet();return}ensureEditable();if(rkeys().length<=1){toast('루틴은 하나 이상 있어야 해요');rDelArm=false;return}delete db.routines[edR];for(const d in db.dayMap)if(db.dayMap[d]===edR)db.dayMap[d]='X';rDelArm=false;edR=null;save();renderSet()}
+ else if(a==='reset'){if(!resetArm){resetArm=true;renderSet();return}delete db.routines;delete db.dayMap;resetArm=false;edIdx=null;edR=null;save();renderSet()}});
+
+/* ---------- 종목 합치기 ---------- */
+/* 같은 운동을 실수로 두 종목으로 만들었을 때: 없앨 종목(from)의 기록을 남길 종목(to)으로 옮기고 from은 루틴·목록에서 뺌.
+   기록 방식이 같은 종목끼리만 합치고, 애니멀플로우는 루틴 A/B 영상이 따로라 뺌.
+   되돌리기는 합친 직후 다른 것을 바꾸기 전까지만(합치기 전 기록 전체를 메모리에 들고 있음) */
+let mgFrom='',mgTo='',mgArm=false,mgBusy=false,mergeUndo=null;
+function recCount(id){let n=0;for(const w of Object.values(db.workouts))if(w.items.some(it=>it.ex.id===id&&hasDone(it.en)))n++;return n}
+function exSrc(id){for(const k of rkeys())if(RT()[k].ex.some(e=>e.id===id))return RT()[k].name;return (db.custom||[]).some(e=>e.id===id)?'내가 만든 종목':'기록에만 있음'}
+function mergeList(){const ids=[];for(const g of library())for(const e of g.items)if(!ids.includes(e.id))ids.push(e.id);
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(!ids.includes(it.ex.id))ids.push(it.ex.id);
+ return ids.map(id=>{const d=exDef(id);return d&&d.type!=='flow'?{id,d,n:recCount(id),src:exSrc(id)}:null}).filter(Boolean).sort((a,b)=>a.d.name.localeCompare(b.d.name,'ko'))}
+function renderMerge(){const L=mergeList(),f=L.find(x=>x.id===mgFrom),tos=f?L.filter(x=>x.id!==f.id&&x.d.type===f.d.type):[];
+ if(!f)mgFrom='';if(!tos.some(x=>x.id===mgTo))mgTo='';const t=tos.find(x=>x.id===mgTo);
+ const opt=(x,sel)=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(x.d.name)} · ${TYPES[x.d.type]} · ${esc(x.src)} · 기록 ${x.n}회</option>`;
+ let h=`<h3>종목 합치기</h3><p>같은 운동을 실수로 두 번 만들었을 때(이름이 달라도) 한쪽 기록을 다른 쪽으로 옮겨 하나로 합쳐요. 지난번 기록과 통계가 이어져요.</p>`;
+ if(L.length<2)h+='<p class="note">합칠 종목이 아직 없어요.</p>';
+ else{h+=`<div class="form" style="background:none;padding:0"><label class="w2">없앨 종목 (기록은 옮겨요)<select id="mg-from"><option value="">고르세요</option>${L.map(x=>opt(x,mgFrom)).join('')}</select></label>
+  <label class="w2">남길 종목<select id="mg-to"${f?'':' disabled'}><option value="">${f?(tos.length?'고르세요':'기록 방식이 같은 종목이 없어요'):'먼저 위에서 고르세요'}</option>${tos.map(x=>opt(x,mgTo)).join('')}</select></label></div>`;
+  if(f&&t){const fn=f.d.name,tn=t.d.name;h+=`<p class="note">${esc(fn)} 기록 ${f.n}회를 ${esc(jo(tn,'으로','로'))} 옮겨요. 옮긴 기록의 종목 이름도 ${esc(jo(tn,'으로','로'))} 바뀌고, ${esc(jo(fn,'은','는'))} 루틴과 종목 목록에서 빠져요.${clipURL[f.id]?(clipURL[t.id]?' 동작 영상은 '+esc(tn)+' 것만 남아요.':' 동작 영상은 '+esc(jo(tn,'으로','로'))+' 옮겨요.'):''}</p><button class="ghost sm${mgArm?' danger':''}" id="mg-go" style="align-self:flex-start">${mgArm?'정말 합치기':'합치기'}</button>`}}
+ if(mergeUndo&&mergeUndo.rev===dataRev)h+=`<div class="row"><button class="ghost sm" id="mg-undo">방금 합친 것 되돌리기</button><span class="note">${esc(mergeUndo.txt)}</span></div>`;
+ $('p-merge').innerHTML=h}
+async function mergeEx(from,to){const a=exDef(from),b=exDef(to);if(!a||!b||from===to||a.type!==b.type)return false;
+ const fn=a.name,tn=b.name,u={raw:JSON.stringify(db),clips:[],txt:fn+' → '+tn},n=recCount(from);ensureEditable();
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id===from){it.ex.id=to;it.ex.name=tn}
+ /* 루틴에서는 그 루틴의 세트·횟수 설정을 그대로 두고 종목만 바꿈. 이미 남길 종목이 있는 루틴에서는 뺌 */
+ for(const k in db.routines){const r=db.routines[k],i=r.ex.findIndex(e=>e.id===from);if(i<0)continue;if(r.ex.some(e=>e.id===to))r.ex.splice(i,1);else{r.ex[i].id=to;r.ex[i].name=tn}}
+ db.custom=(db.custom||[]).filter(e=>e.id!==from);if(!inLibrary(to))db.custom.push(clone(Object.assign({},b,{name:tn})));
+ const st=settings();for(const k of ['rest','holdMax'])if(st[k])delete st[k][from];if(statEx===from)statEx=to;
+ if(clipURL[from]){let blob=null;try{blob=await idbDo('readonly',x=>x.get(from))}catch(e){}
+  if(blob){const keep=!!clipURL[to];if(!keep){await putClip(to,blob);if(st.clip&&st.clip[from])st.clip[to]=st.clip[from]}u.clips.push({k:from,blob,del:keep?null:to});await delClip(from)}}
+ save();u.rev=dataRev;mergeUndo=u;toast(fn+' 기록 '+n+'회를 '+jo(tn,'으로','로')+' 합쳤어요');return true}
+async function undoMerge(){const u=mergeUndo;if(!u||u.rev!==dataRev)return false;mergeUndo=null;const cur=db;
+ db=JSON.parse(u.raw);try{migrate()}catch(e){db=cur;return false}if(!save()){db=cur;save();return false}W=W&&db.workouts[W.id]||null;
+ for(const c of u.clips){await putClip(c.k,c.blob);if(c.del)await delClip(c.del)}return true}
+$('p-merge').addEventListener('change',e=>{const t=e.target;if(t.id==='mg-from'){mgFrom=t.value;mgTo='';mgArm=false;renderMerge()}else if(t.id==='mg-to'){mgTo=t.value;mgArm=false;renderMerge()}});
+$('p-merge').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||mgBusy)return;
+ if(b.id==='mg-go'){if(!mgArm){mgArm=true;renderMerge();return}mgArm=false;mgBusy=true;try{if(await mergeEx(mgFrom,mgTo)){mgFrom=mgTo=''}}finally{mgBusy=false}renderSet();return}
+ if(b.id==='mg-undo'){mgBusy=true;let ok=false;try{ok=await undoMerge()}finally{mgBusy=false}renderSet();toast(ok?'합치기 전으로 되돌렸어요':'되돌리지 못했어요')}});
+
+/* ---------- 백업 ---------- */
+function copyText(text,m,after){let settled=false;const ok=()=>{settled=true;m.textContent='복사했어요';after&&after()};
+ const fb=()=>{if(settled)return;settled=true;const ta=document.createElement('textarea');ta.value=text;ta.className='code';ta.readOnly=true;m.textContent='아래를 길게 눌러 복사하세요';m.after(ta);ta.focus();ta.select();try{ta.setSelectionRange(0,ta.value.length)}catch(e){}after&&after()};
+ m.textContent='복사하는 중…';setTimeout(fb,1500);try{navigator.clipboard.writeText(text).then(ok,fb)}catch(e){fb()}}
+$('copy').addEventListener('click',()=>{const ta=$('exp'),m=$('copymsg');let settled=false;
+ /* 선택해 둔 내용이 풀리지 않게 ta.value는 다시 넣지 않음 */
+ const mark=()=>{db.lastBackup=Date.now();save();paintBk()};
+ const ok=()=>{settled=true;m.textContent='복사했어요';mark()};const fb=()=>{if(settled)return;settled=true;ta.focus();ta.select();try{ta.setSelectionRange(0,ta.value.length)}catch(e){}m.textContent='전체 선택됐어요. 길게 눌러 복사하세요';mark()};
+ ta.value=JSON.stringify(Object.assign({},db,{lastBackup:Date.now()}));m.textContent='복사하는 중…';setTimeout(fb,1500);
+ try{navigator.clipboard.writeText(ta.value).then(ok,fb)}catch(e){fb()}});
+function paintBk(){$('bkinfo').textContent=(db.lastBackup?'마지막 백업: '+fmtDate(dstr(new Date(db.lastBackup)))+'. ':'아직 백업한 적이 없어요. ')+'아래 내용을 복사해 두거나 파일로 저장하세요.';
+ const ks=Object.keys(clipURL),sz=ks.reduce((a,k)=>a+(clipSize[k]||0),0);
+ $('clipinfo').textContent=ks.length?`동작 영상 ${ks.length}개(${mb(sz)})는 복사·파일 저장에 들어가지 않아요. '영상까지 저장'은 기록과 영상을 zip 파일 하나로 묶어요. 압축을 풀면 영상 원본도 꺼낼 수 있어요.`:'동작 영상을 넣으면 여기서 기록과 함께 zip 파일 하나로 저장할 수 있어요.';
+ $('cliprow').hidden=!ks.length;paintZip();
+ const ua=undoAt();$('undorow').hidden=!ua;if(ua){$('undoinfo').textContent=undoArm?'그 뒤에 한 기록은 사라져요. 한 번 더 누르면 되돌려요.':fmtDate(dstr(new Date(ua)))+' '+hm(ua)+'에 불러오기 전 기록';$('undobtn').textContent=undoArm?'정말 되돌리기':'불러오기 전으로 되돌리기';$('undobtn').classList.toggle('danger',undoArm)}}
+/* 만든 뒤 기록이나 영상이 바뀌었으면(dataRev) 그 zip은 버리고 다시 만들게 함 */
+function paintZip(){if(zipReady&&zipReady.rev!==dataRev){zipReady=null;$('zipmsg').textContent=''}
+ $('savezip').textContent=zipReady?'zip 저장 ('+mb(zipReady.blob.size)+')':'영상까지 저장';$('savezip').classList.toggle('ok',!!zipReady)}
+function mb(b){return (b/1048576).toFixed(b<10485760?1:0)+'MB'}
+function markBackup(){db.lastBackup=Date.now();save();$('exp').value=JSON.stringify(db);paintBk()}
+function bkName(ext){return 'platelog-'+today()+'.'+ext}
+function bkJSON(){return JSON.stringify(Object.assign({},db,{lastBackup:Date.now(),rest:undefined,timer:undefined}))}
+/* 휴대폰은 공유 시트(파일에 저장·AirDrop), 컴퓨터는 다운로드. 공유는 탭 직후에만 열려서 zip은 만든 뒤 한 번 더 누르게 함 */
+async function saveFile(blob,name,m){const f=new File([blob],name,{type:blob.type});
+ if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){
+  try{await navigator.share({files:[f]});return true}catch(e){if(e&&e.name==='AbortError'){m.textContent='취소했어요';return false}}}
+ const a=document.createElement('a'),u=URL.createObjectURL(f);a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);return true}
+$('savejson').addEventListener('click',async()=>{const m=$('copymsg');try{if(await saveFile(new Blob([bkJSON()],{type:'application/json'}),bkName('json'),m)){m.textContent='저장했어요';markBackup()}}catch(e){m.textContent='저장하지 못했어요'}});
+let zipReady=null;
+$('savezip').addEventListener('click',async()=>{const b=$('savezip'),m=$('zipmsg');
+ if(zipReady&&zipReady.rev===dataRev){try{if(await saveFile(zipReady.blob,bkName('zip'),m)){zipReady=null;m.textContent='저장했어요';markBackup()}}catch(e){m.textContent='저장하지 못했어요'}return}
+ b.disabled=true;m.textContent='zip 만드는 중…';const r0=dataRev;
+ try{zipReady={blob:await backupZip(),rev:r0};m.textContent=r0===dataRev?'다 만들었어요. 한 번 더 눌러 저장하세요.':''}catch(e){m.textContent=e&&e.message==='big'?'영상이 너무 커서 zip 하나로 묶을 수 없어요(4GB 이하).':'만들지 못했어요. 휴대폰 저장 공간을 확인해 주세요.'}
+ b.disabled=false;paintZip();if(r0!==dataRev)m.textContent='만드는 동안 기록이 바뀌었어요. 다시 눌러 주세요.'});
+
+/* zip (압축 없이 저장만): platelog.json + clips/index.json(영상 키 → 파일) + clips/종목이름.mp4 */
+let crcT=null;
+function crc32(u8,c=0xFFFFFFFF){if(!crcT){crcT=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;crcT[n]=c>>>0}}
+ for(let i=0;i<u8.length;i++)c=crcT[(c^u8[i])&255]^(c>>>8);return c}
+/* 큰 영상을 통째로 메모리에 올리지 않게 조각씩 읽으며 CRC 계산 */
+async function blobCrc(b){let c=0xFFFFFFFF;if(b.stream){const r=b.stream().getReader();for(;;){const{done,value}=await r.read();if(done)break;c=crc32(value,c)}}else c=crc32(new Uint8Array(await b.arrayBuffer()),c);return (c^0xFFFFFFFF)>>>0}
+async function makeZip(files){const enc=new TextEncoder(),parts=[],cen=[],d=new Date();
+ const tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();let off=0;
+ if(files.length>0xFFFF)throw new Error('big');
+ for(const f of files){const nm=enc.encode(f.name),sz=f.blob.size;if(off+30+nm.length+sz>0xFFFFFFFF)throw new Error('big');const crc=await blobCrc(f.blob);
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);h.setUint16(10,tm,true);h.setUint16(12,dt,true);h.setUint32(14,crc,true);h.setUint32(18,sz,true);h.setUint32(22,sz,true);h.setUint16(26,nm.length,true);
+  const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x800,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);c.setUint32(16,crc,true);c.setUint32(20,sz,true);c.setUint32(24,sz,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+  parts.push(h.buffer,nm,f.blob);cen.push(c.buffer,nm);off+=30+nm.length+sz}
+ const cs=cen.reduce((a,x)=>a+x.byteLength,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cen,e.buffer],{type:'application/zip'})}
+function clipFileName(k,b,used){const [id,v]=k.split(':'),base=(exName(id)+(v?' '+v:'')).replace(/[\\/:*?"<>|]/g,'').trim()||'clip';
+ const ext=({'video/mp4':'mp4','video/quicktime':'mov','video/webm':'webm','image/gif':'gif','image/webp':'webp','image/png':'png','image/jpeg':'jpg'})[b.type]||((b.name||'').match(/\.(\w+)$/)||[])[1]||'bin';
+ let nm=base,i=2;while(used.has(nm))nm=base+' '+(i++);used.add(nm);return 'clips/'+nm+'.'+ext.toLowerCase()}
+async function backupZip(){const keys=((await idbDo('readonly',st=>st.getAllKeys()))||[]).filter(k=>!String(k).startsWith('undo:')),man={},used=new Set(),clips=[];
+ for(const k of keys){const b=await idbDo('readonly',st=>st.get(k));if(!b)continue;const nm=clipFileName(k,b,used);man[k]={file:nm,type:b.type||''};clips.push({name:nm,blob:b})}
+ return makeZip([{name:'platelog.json',blob:new Blob([bkJSON()],{type:'application/json'})},{name:'clips/index.json',blob:new Blob([JSON.stringify(man)],{type:'application/json'})},...clips])}
+/* 다시 묶은 zip(압축됨)도 읽을 수 있게 deflate는 DecompressionStream으로 풂 */
+async function readZip(file){const dv=async(a,b)=>new DataView(await file.slice(a,b).arrayBuffer());
+ const tail=await dv(Math.max(0,file.size-65557),file.size);let e=-1;for(let i=tail.byteLength-22;i>=0;i--)if(tail.getUint32(i,true)===0x06054b50){e=i;break}if(e<0)throw 0;
+ const cnt=tail.getUint16(e+10,true),co=tail.getUint32(e+16,true),cd=await dv(co,co+tail.getUint32(e+12,true)),dec=new TextDecoder(),ent={};
+ for(let p=0,i=0;i<cnt;i++){if(cd.getUint32(p,true)!==0x02014b50)throw 0;const nl=cd.getUint16(p+28,true);
+  ent[dec.decode(new Uint8Array(cd.buffer,cd.byteOffset+p+46,nl))]={m:cd.getUint16(p+10,true),sz:cd.getUint32(p+20,true),lo:cd.getUint32(p+42,true)};p+=46+nl+cd.getUint16(p+30,true)+cd.getUint16(p+32,true)}
+ return{names:Object.keys(ent),get:async name=>{const z=ent[name];if(!z)return null;const h=await dv(z.lo,z.lo+30),st=z.lo+30+h.getUint16(26,true)+h.getUint16(28,true),raw=file.slice(st,st+z.sz);
+  if(z.m===0)return raw;if(z.m===8&&window.DecompressionStream)return new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();throw 0}}}
+async function readBackupZip(f){const z=await readZip(f),jn=z.names.find(n=>/(^|\/)platelog\.json$/.test(n)&&!n.startsWith('__MACOSX'));if(!jn)throw 0;
+ const dir=jn.slice(0,-'platelog.json'.length),mn=z.names.includes(dir+'clips/index.json')?dir+'clips/index.json':null,man=mn?JSON.parse(await (await z.get(mn)).text()):{},clips=[];
+ for(const k in man){const b=await z.get(dir+man[k].file);if(b)clips.push({k,b:new Blob([b],{type:man[k].type||''})})}
+ return{text:await (await z.get(jn)).text(),clips}}
+
+/* zipImp: zip에서 읽은 내용. 붙여 넣은 칸을 고치지 않았으면 '불러오기'를 다시 눌러도 영상까지 함께 씀 */
+let zipImp=null;
+$('impfile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;zipImp=null;/* 같은 파일을 다시 골라도 change가 오게 비움 */
+ const sig=new Uint8Array(await f.slice(0,4).arrayBuffer());
+ if(sig[0]===0x50&&sig[1]===0x4B&&sig[2]===3&&sig[3]===4){const m=$('impmsg');pending=null;$('impok').hidden=true;m.textContent='zip 파일 읽는 중…';
+  try{const r=await readBackupZip(f);$('imp').value=r.text;zipImp=r;checkImp(r.clips)}catch(err){m.textContent='zip 파일을 읽을 수 없어요. \'영상까지 저장\'으로 만든 파일인지 확인하세요.'}return}
+ const rd=new FileReader();rd.onload=()=>{$('imp').value=rd.result;checkImp()};rd.readAsText(f)});
+let pending=null,pendingClips=null;
+function checkImp(clips){const m=$('impmsg');pending=null;pendingClips=clips&&clips.length?clips:null;$('impok').hidden=true;
+ try{const d=JSON.parse($('imp').value);if(!d||(typeof d.sessions!=='object'&&typeof d.workouts!=='object'))throw 0;pending=d;
+  const n=d.workouts?Object.keys(d.workouts).length:Object.keys(d.sessions).length;
+  m.textContent=n+(d.workouts?'개 운동 기록':'일치 기록')+(pendingClips?'과 동작 영상 '+pendingClips.length+'개를':'을')+' 찾았어요. 덮어쓰려면 확인을 누르세요.';$('impok').hidden=false}
+ catch(e){m.textContent='내용을 읽을 수 없어요. 내보내기에서 복사한 내용 전체를 붙여 넣었는지 확인하세요.'}}
+$('impbtn').addEventListener('click',()=>checkImp(zipImp&&$('imp').value===zipImp.text?zipImp.clips:null));
+/* 바꾸기 전에 모든 화면을 한 번 그려 봐서 깨지는 내용이면 지금 기록을 그대로 둠 */
+$('impok').addEventListener('click',async()=>{if(!pending)return;const cl=pendingClips,m=$('impmsg'),old=db,oldW=W;
+ edIdx=null;draft=null;
+ try{db=pending;W=null;migrate();renderHome();renderRecord();renderStats();renderSet()}catch(e){db=old;W=oldW;renderSet();m.textContent='이 내용은 형식이 맞지 않아 불러오지 않았어요. 지금 기록은 그대로예요.';return}
+ /* 되돌리기용으로 불러오기 전 기록을 남겨 둠. 둘 다 담을 자리가 없으면 사본 없이 불러옴 */
+ const snap={at:Date.now(),db:old,clips:{replaced:[],added:[]}};let undo=putUndo(snap);
+ if(!save()&&undo){dropUndo();undo=false;save()}
+ if(saveErr){db=old;W=oldW;renderSet();m.textContent='저장 공간이 부족해서 불러오지 못했어요. 지금 기록은 그대로예요.';return}
+ pending=null;pendingClips=null;zipImp=null;$('impok').hidden=true;await clearUndoClips();
+ let msg='불러왔어요.';if(cl){m.textContent='동작 영상 저장하는 중…';let ok=0;
+  /* 덮어쓰는 영상은 'undo:키'로 옮겨 두고, 새로 생기는 영상은 목록에 적어 둠 (되돌릴 때 지움) */
+  for(const c of cl){try{const prev=await idbDo('readonly',st=>st.get(c.k));if(prev){await idbDo('readwrite',st=>st.put(prev,'undo:'+c.k));snap.clips.replaced.push(c.k)}else snap.clips.added.push(c.k);await putClip(c.k,c.b);ok++}catch(e){}}
+  if(undo)putUndo(snap);
+  msg=ok===cl.length?'기록과 동작 영상 '+ok+'개를 불러왔어요.':'기록은 불러왔지만 동작 영상 '+(cl.length-ok)+'개는 저장하지 못했어요. 휴대폰 저장 공간을 확인해 주세요.'}
+ m.textContent=msg+(undo?' 잘못 불러왔으면 아래에서 되돌릴 수 있어요.':'');renderSet()});
+/* 불러오기 되돌리기: 불러오기 직전 기록(platelog.v1.undo)과 그 시각(.undoAt). 7일이 지나면 지움 */
+let undoArm=false;
+function putUndo(snap){try{localStorage.setItem(K+'.undo',JSON.stringify(snap));localStorage.setItem(K+'.undoAt',String(snap.at));return true}catch(e){dropUndo();return false}}
+function dropUndo(){try{localStorage.removeItem(K+'.undo');localStorage.removeItem(K+'.undoAt')}catch(e){}}
+function undoAt(){let at=0;try{at=+localStorage.getItem(K+'.undoAt')||0}catch(e){}if(at&&Date.now()-at>7*864e5){dropUndo();clearUndoClips();return 0}return at}
+async function clearUndoClips(){try{const ks=(await idbDo('readonly',st=>st.getAllKeys())||[]).filter(k=>String(k).startsWith('undo:'));for(const k of ks)await idbDo('readwrite',st=>st.delete(k))}catch(e){}}
+async function undoImport(){let u=null;try{u=JSON.parse(localStorage.getItem(K+'.undo'))}catch(e){}if(!u||!u.db)return false;
+ const cur=db;db=u.db;try{migrate()}catch(e){db=cur;return false}if(!save()){db=cur;save();return false}W=null;
+ for(const k of (u.clips&&u.clips.added)||[])await delClip(k);
+ for(const k of (u.clips&&u.clips.replaced)||[]){try{const b=await idbDo('readonly',st=>st.get('undo:'+k));if(b)await putClip(k,b)}catch(e){}}
+ await clearUndoClips();dropUndo();return true}
+$('undobtn').addEventListener('click',async()=>{const m=$('impmsg');if(!undoArm){undoArm=true;paintBk();return}undoArm=false;
+ m.textContent='되돌리는 중…';m.textContent=await undoImport()?'불러오기 전으로 되돌렸어요.':'되돌리지 못했어요. 저장 공간을 확인해 주세요.';renderSet()});
+
+/* ---------- 동작 영상 (기기 안 IndexedDB에만 저장) ---------- */
+const clipURL={},clipType={},clipSize={};let clipFor=null,clipDelArm=null;
+function clipView(id){const v=(db.settings&&db.settings.clip&&db.settings.clip[id])||{};return{open:v.open!==false,z:v.z||1,y:v.y||0}}
+function setClipView(id,patch){const st=settings();st.clip=st.clip||{};st.clip[id]=Object.assign(clipView(id),patch);save()}
+function clipKey(ex,en){if(ex.type!=='flow')return ex.id;return ex.id+':'+(en&&en.variant==='B'?'B':'A')}
+function updClip(it,ck){const v=clipView(ck),bx=document.querySelector('#card-'+it.u+' .clipbox');if(bx){bx.style.setProperty('--z',v.z);bx.style.setProperty('--y',v.y+'%')}}
+/* 연결은 하나만 열어 두고 재사용. 닫히거나 새 버전이 열리면 다음 요청 때 다시 엶 */
+let idbP=null;
+function idb(){return idbP=idbP||new Promise((res,rej)=>{try{const r=indexedDB.open('platelog-media',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');
+ r.onsuccess=()=>{const d=r.result;d.onversionchange=()=>{d.close();idbP=null};d.onclose=()=>{idbP=null};res(d)};r.onerror=()=>{idbP=null;rej(r.error)}}catch(e){idbP=null;rej(e)}})}
+async function idbDo(mode,fn){const d=await idb();return new Promise((res,rej)=>{let tx;try{tx=d.transaction('clips',mode)}catch(e){idbP=null;rej(e);return}const st=tx.objectStore('clips');const r=fn(st);
+ tx.oncomplete=()=>res(r&&r.result);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new DOMException('aborted','AbortError'))})}
+async function loadClips(){try{let keys=((await idbDo('readonly',st=>st.getAllKeys()))||[]).filter(k=>!String(k).startsWith('undo:'));
+ if((keys||[]).includes('aflow')&&!keys.includes('aflow:A')){const bl=await idbDo('readonly',st=>st.get('aflow'));if(bl){await idbDo('readwrite',st=>{st.put(bl,'aflow:A');return st.delete('aflow')});keys=((await idbDo('readonly',st=>st.getAllKeys()))||[]).filter(k=>!String(k).startsWith('undo:'))}}
+ for(const k of keys||[]){const blob=await idbDo('readonly',st=>st.get(k));if(blob){clipURL[k]=URL.createObjectURL(blob);clipType[k]=blob.type||'';clipSize[k]=blob.size}}if((keys||[]).length&&V==='run')renderRun();if(V==='set')paintBk()}catch(e){}}
+async function putClip(id,blob){await idbDo('readwrite',st=>st.put(blob,id));dataRev++;if(clipURL[id])URL.revokeObjectURL(clipURL[id]);clipURL[id]=URL.createObjectURL(blob);clipType[id]=blob.type||'';clipSize[id]=blob.size}
+async function delClip(id){try{await idbDo('readwrite',st=>st.delete(id))}catch(e){}dataRev++;if(clipURL[id])URL.revokeObjectURL(clipURL[id]);delete clipURL[id];delete clipType[id];delete clipSize[id];if(db.settings&&db.settings.clip)delete db.settings.clip[id];save()}
+$('clipfile').addEventListener('change',async e=>{const f=e.target.files[0],cf=clipFor;clipFor=null;if(!f||!cf)return;const it=item(cf.u);
+ if(!/^(video|image)\//.test(f.type)&&!/\.(mov|mp4|m4v|gif|webp|png|jpe?g)$/i.test(f.name)){alertCard(cf.u,'영상이나 GIF 파일만 넣을 수 있어요.');return}
+ if(f.size>60*1024*1024){alertCard(cf.u,'파일이 너무 커요(60MB 이하). 짧게 잘라서 넣어 주세요.');return}
+ try{await putClip(cf.ck,f);setClipView(cf.ck,{open:true,z:1,y:0});if(it)refresh(it)}catch(err){alertCard(cf.u,'저장하지 못했어요. 휴대폰 저장 공간을 확인해 주세요.')}});
+function alertCard(u,msg){const c=$('card-'+u);if(!c)return;let m=c.querySelector('.clipmsg');if(!m){m=document.createElement('p');m.className='note clipmsg';m.style.color='var(--red)';c.querySelector('.ctl').after(m)}m.textContent=msg}
+
+/* ---------- 소리 · 화면 ---------- */
+let ac=null;
+function unlockAudio(){try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()}if(ac.state!=='running')ac.resume()}catch(e){}}/* iOS는 전화·Siri 뒤 'interrupted' 상태가 됨 */
+function beep(f=880,d=0.12,n=1){if(!ac)return;try{for(let k=0;k<n;k++){const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+k*0.22;o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.4,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.start(t);o.stop(t+d+0.02)}}catch(e){}}
+/* 진동은 한 번이라도 화면을 누른 뒤에만 됨 (안 누른 채 부르면 브라우저가 오류를 남김) */
+function buzz(p){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(p)}catch(e){}}
+let wl=null;async function lock(){try{if(wl&&wl.released===false)return;if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function unlock(){try{wl&&wl.release()}catch(e){}wl=null}
+
+/* ---------- 휴식 타이머 (마지막 세트 뒤 휴식이 끝나면 다음 운동으로) ---------- */
+/* restNext는 다음 종목의 u(순서를 바꿔도 같은 종목). 휴식 중에 직접 다른 종목으로 가면 자동 이동은 취소 */
+/* 휴식 상태는 db.rest에도 적어 둠: iOS가 쉬는 동안 페이지를 닫았다가 다시 열어도 resumeRest로 이어 감 */
+/* 휴식은 크게(원이 도는 화면) 시작하고, 아래로 밀면 작은 바로 내려감. 작게 둔 것(mini)도 db.rest에 적어 둠 */
+let restEnd=0,restIv=null,restBeeped=false,restNext=null,restW=null,restStart=0,restBig=false,rbT=0;
+function startRest(sec,next){showRest(Date.now()+sec*1000,next,Date.now(),!kp);
+ db.rest={w:restW,end:restEnd,next:restNext,from:W&&W.items[W.cur]?W.items[W.cur].u:null,start:restStart,mini:!restBig};save()}
+function showRest(end,next,start,big){restEnd=end;restStart=Math.min(start||Date.now(),end);restBeeped=false;restNext=next;restW=W&&W.id;
+ $('rest').hidden=false;document.body.classList.add('resting');clearInterval(restIv);restIv=setInterval(tickRest,250);setRestBig(big);tickRest();lock()}
+/* 다음 종목으로 넘어갈 휴식이면 그 이름, 세트 사이 휴식이면 지금 종목과 다음 세트 */
+function restLabels(){const nx=restNext!=null&&W&&W.items.find(it=>it.u===restNext);$('rest-lbl').textContent=nx?'휴식 후 다음 · '+nx.ex.name:'휴식';
+ const it=!nx&&W&&W.items[W.cur],s=it&&it.en.sets,i=s?s.findIndex(x=>!x.done):-1;
+ $('rb-ttl').textContent=nx?'다음 운동 · '+nx.ex.name:it?it.ex.name:'';
+ $('rb-sub').textContent=nx?'끝나면 자동으로 넘어가요':i<0?'':'다음 · '+(it.ex.sides?(i%2?'오른쪽 ':'왼쪽 ')+(Math.floor(i/2)+1):(i+1)+'세트')}
+/* 크게 보기 ↔ 작은 바. 휴식이 멈추면 크게 보기도 아래로 내려가며 사라짐 */
+function setRestBig(on){restBig=!!on;const el=$('restbig'),show=restBig&&!!restIv;document.body.classList.toggle('rest-big',show);
+ clearTimeout(rbT);el.classList.remove('drag');el.style.transform='';
+ if(show){restLabels();if(el.hidden){el.classList.add('away');el.hidden=false;void el.offsetWidth}el.classList.remove('away')}
+ else{restLabels();if(!el.hidden){el.classList.add('away');rbT=setTimeout(()=>{el.hidden=true;el.classList.remove('away')},230)}}}
+function restMode(big){setRestBig(big);if(db.rest){db.rest.mini=!restBig;save()}}
+function keepRest(){if(db.rest&&restIv){db.rest.end=restEnd;db.rest.next=restNext;db.rest.start=restStart;db.rest.mini=!restBig;save()}}
+function resumeRest(){const r=db.rest;if(!r)return;delete db.rest;const w=db.workouts[r.w];
+ if(!w||w.status!=='run'||!w.items.length||Date.now()-r.end>30*60e3){save();return}
+ W=w;go('run');
+ if(r.end>Date.now()){showRest(r.end,r.next,r.start,!r.mini);db.rest=r;save();return}
+ /* 닫혀 있는 사이 휴식이 끝났으면, 그대로 있었을 때처럼 다음 종목으로 옮겨 둠 */
+ save();flash();const cur=w.items[w.cur];
+ if(r.next&&cur&&cur.u===r.from){const i=w.items.findIndex(it=>it.u===r.next);if(i>=0){goItem(i);toast('휴식이 끝났어요 · 다음 운동 '+w.items[i].ex.name);return}}
+ toast('휴식이 끝났어요')}
+function advanceRest(){const nu=restNext;restNext=null;stopRest();if(nu==null||V!=='run'||!W||W.id!==restW)return;
+ const i=W.items.findIndex(it=>it.u===nu);if(i<0||i===W.cur)return;
+ /* 메모를 쓰는 중이면 화면을 옮기지 않고 알려만 줌 */
+ const ae=document.activeElement;if(ae&&ae.dataset&&ae.dataset.exmemo){toast('휴식 끝 · 메모를 다 쓰면 다음 › '+W.items[i].ex.name);return}
+ goItem(i);toast('다음 운동 · '+W.items[i].ex.name)}
+/* 원은 남은 시간 ÷ 전체 휴식(늘리거나 줄인 것 포함)만큼 남음. 세트 사이 휴식이 끝나면 다음 세트를 바로 누를 수 있게 작은 바로 내림 */
+function tickRest(){const left=(restEnd-Date.now())/1000,txt=left>0?mmss(Math.ceil(left)):'시작!';
+ $('restt').textContent=txt;$('rb-num').textContent=txt;$('rest').classList.toggle('zero',left<=0);$('rb-dial').classList.toggle('count',left<=0);
+ $('rb-arc').style.strokeDashoffset=C*(1-(left>0?Math.min(1,left*1000/Math.max(1,restEnd-restStart)):0));
+ if(left<=0&&!restBeeped){restBeeped=true;beep(988,0.2,2);flash();buzz([200,100,200]);if(restNext!=null){advanceRest();return}setRestBig(false)}
+ if(kp)paintKpRest();if(left<-20)stopRest()}
+function stopRest(){clearInterval(restIv);restIv=null;setRestBig(false);$('rest').hidden=true;document.body.classList.remove('resting');if(kp)paintKpRest();unlock();if(db.rest){delete db.rest;save()}}
+/* 끝난 뒤(시작! 표시 중)에 늘리면 지금부터 10초 휴식을 새로 셈 */
+function restAdd(){const now=Date.now();if(restEnd<=now)restStart=now;restEnd=Math.max(restEnd,now)+10000;restBeeped=false;tickRest();keepRest()}
+/* 10초 넘게 남았을 때만 줄이고, 그보다 적게 남았으면 바로 끝냄(건너뛰기와 같음). 이미 끝난 뒤에는 아무것도 안 함 */
+function restSub(){const left=restEnd-Date.now();if(left<=0)return;restEnd=left>10000?restEnd-10000:Date.now();tickRest();keepRest()}
+function restSkip(){if(restNext!=null)advanceRest();else stopRest()}
+for(const[id,f]of[['rest-add',restAdd],['rb-add',restAdd],['rest-sub',restSub],['rb-sub10',restSub],['rest-skip',restSkip],['rb-skip',restSkip]])$(id).addEventListener('click',f);
+/* 위아래로 밀기: 8px 넘게 움직이면 미는 것으로 보고, 손을 뗀 뒤 따라오는 클릭(버튼 눌림)은 버림 */
+function vdrag(el,move,end){let y0=null,t0=0,id=null,on=false,eat=false;
+ el.addEventListener('pointerdown',e=>{if(e.button||!e.isPrimary)return;y0=e.clientY;t0=Date.now();id=e.pointerId;on=false});
+ el.addEventListener('pointermove',e=>{if(y0==null||e.pointerId!==id)return;const dy=e.clientY-y0;
+  if(!on&&Math.abs(dy)>8){on=true;try{el.setPointerCapture(id)}catch(_){}}if(on)move(dy)});
+ const up=e=>{if(y0==null||e.pointerId!==id)return;const dy=e.clientY-y0;y0=null;if(!on)return;on=false;eat=true;setTimeout(()=>{eat=false},350);end(e.type==='pointercancel'?0:dy,Date.now()-t0)};
+ el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+ el.addEventListener('click',e=>{if(eat){eat=false;e.stopPropagation();e.preventDefault()}},true)}
+/* 크게 볼 때: 손가락을 따라 내려가다가 충분히(또는 빠르게) 내리면 작게, 아니면 제자리로 */
+vdrag($('restbig'),dy=>{const el=$('restbig');el.classList.add('drag');el.style.transform='translateY('+Math.max(0,dy)+'px)'},
+ (dy,dt)=>{const el=$('restbig');el.classList.remove('drag');if(dy>Math.min(120,innerHeight*.15)||(dy>30&&dt<250))restMode(false);else el.style.transform=''});
+/* 작은 바: 위로 밀면 크게 */
+vdrag($('rest'),dy=>{$('rest').style.transform='translateY('+Math.max(-48,Math.min(0,dy))+'px)'},dy=>{$('rest').style.transform='';if(dy<-24)restMode(true)});
+$('rest-open').addEventListener('click',()=>restMode(true));
+$('rb-min').addEventListener('click',()=>restMode(false));
+/* 무음 모드면 소리가 안 나고 iPhone은 진동도 안 돼서, 휴식·라운드·목표 시점에 화면 전체를 깜빡임.
+   화면을 안 보고 있을 때 끝났으면 1분 안에 돌아오면 그때 깜빡임 */
+let flashDue=0,flashT=0;
+function flash(){if(document.hidden){flashDue=Date.now();return}const f=$('flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');clearTimeout(flashT);flashT=setTimeout(()=>f.classList.remove('on'),1600)}
+
+/* ---------- 3초 카운트다운 타이머 ---------- */
+/* 타이머 상태(t0 = 카운트다운 시작 시각)는 db.timer에도 적어 둠: 페이지가 닫혔다 열려도 resumeTimer로 이어 감 */
+let T=null,tiv=null;const C=326.7;
+function openTimer(o){const t0=o.t0||Date.now(),run=Date.now()-t0>=3000;
+ T=Object.assign({lastBeep:null,hit:false},o,{t0,w:o.w||(W&&W.id),phase:run?'run':'count',start:run?t0+3000:t0});
+ if(run&&T.mode==='hold'&&Date.now()-T.start>=T.target*1000)T.hit=true;
+ db.timer={mode:T.mode,w:T.w,u:T.u,i:T.i,t0,title:T.title,target:T.target,max:T.max,rounds:T.rounds,reps:T.reps,dur:T.dur};save();
+ $('ov').hidden=false;$('ovttl').textContent=o.title;$('ovdone').textContent=o.mode==='emom'?'종료':'완료';
+ lock();clearInterval(tiv);tiv=setInterval(tick,100);tick()}
+function setArc(p){$('arc').style.strokeDashoffset=C*(1-Math.max(0,Math.min(1,p)))}
+function tick(){if(!T)return;const now=Date.now(),dial=$('dial'),numEl=$('ovnum'),sub=$('ovsub');
+ if(T.phase==='count'){const left=3-(now-T.start)/1000,c=Math.ceil(left);dial.classList.add('count');
+  if(left<=0){T.phase='run';T.start+=3000;T.lastBeep=null;beep(1175,0.25);dial.classList.remove('count')}
+  else{numEl.textContent=c;sub.textContent='준비';setArc(1-left/3);if(T.lastBeep!==c){T.lastBeep=c;beep(660,0.09)}return}}
+ const t=(now-T.start)/1000;
+ if(T.mode==='hold'){if(!T.max&&t>=T.target){beep(988,0.25,2);flash();buzz(200);finishT(T.target);return}
+  numEl.textContent=Math.floor(t);setArc(t/T.target);sub.textContent=t<T.target?(T.max?'목표 '+T.target+'초 · 할 수 있는 만큼':'목표 '+T.target+'초 · 되면 자동 완료'):'목표 달성 · 더 버텨도 돼요';if(t>=T.target&&!T.hit){T.hit=true;beep(988,0.2,2);flash()}}
+ else if(T.mode==='emom'){const r=Math.floor(t/60),inMin=t%60;if(r>=T.rounds){flash();finishT(T.rounds);return}
+  numEl.textContent=mmss(60-inMin);setArc(inMin/60);sub.textContent=(r+1)+' / '+T.rounds+' 라운드 · '+T.reps+'개';
+  if(T.lastBeep!==r){if(T.lastBeep!==null){beep(1175,0.25);flash()}T.lastBeep=r}
+  if(60-inMin<=3&&T.cd!==r*10+Math.ceil(60-inMin)){T.cd=r*10+Math.ceil(60-inMin);beep(660,0.08)}}
+ else{const left=T.dur-t;if(left<=0){beep(988,0.3,3);flash();finishT();return}numEl.textContent=mmss(Math.ceil(left));setArc(t/T.dur);sub.textContent='남은 시간'}}
+function finishT(v){const o=T;closeTimer();timerDone(o,o.mode==='hold'?Math.max(1,Math.floor(v)):v)}
+/* 타이머 결과를 종목에 기록. at은 끝난 시각(다시 열었을 때는 실제로 끝났을 시각) */
+function timerDone(o,v,at=Date.now()){const w=db.workouts[o.w],it=w&&w.items.find(x=>x.u===o.u);if(!it)return;const ex=it.ex,en=it.en;
+ if(o.mode==='hold'){const s=en.sets&&en.sets[o.i];if(!s)return;s.s=String(v);s.done=true;s.t=at}
+ else if(o.mode==='emom'){if(!v)return;/* 1라운드도 안 하고 종료하면 이전 기록을 지우지 않음 */en.rounds=Math.max(en.rounds||0,v);en.done=en.rounds>=ex.rounds;en.t=at}
+ else{en.done=true;en.t=at}
+ save();if(W!==w)return;refresh(it);if(o.mode==='hold')checkPR(it);if(o.mode!=='emom'||en.done)afterDone(it)}
+function closeTimer(){clearInterval(tiv);T=null;$('ov').hidden=true;$('dial').classList.remove('count');setArc(0);unlock();if(db.timer){delete db.timer;save()}}
+/* 다시 열었을 때: 아직 진행 중이면 같은 시각 기준으로 타이머를 다시 띄우고, 그사이 끝났으면 끝난 시각으로 기록하고 휴식도 그 시각부터 셈.
+   '최대로 버티기'는 언제 멈췄는지 알 수 없어서 10분 안에 돌아왔을 때만 이어 감. 끝난 지 30분이 넘었으면 기록하지 않음 */
+function resumeTimer(){const o=db.timer;if(!o)return;delete db.timer;save();
+ const w=db.workouts[o.w],i=w?w.items.findIndex(x=>x.u===o.u):-1;if(i<0||w.status!=='run')return;
+ const now=Date.now(),r0=o.t0+3000,endAt=o.mode==='hold'?(o.max?null:r0+o.target*1000):o.mode==='emom'?r0+o.rounds*60000:r0+o.dur*1000;
+ if(endAt==null&&now-r0>10*60e3)return;
+ if(endAt!=null&&now>=endAt){if(now-endAt>30*60e3)return;
+  W=w;w.cur=i;go('run');const it=w.items[i];stopRest();timerDone(o,o.mode==='hold'?o.target:o.mode==='emom'?o.rounds:undefined,endAt);
+  if(restIv&&db.rest){restStart=endAt;restEnd=endAt+restOf(it.ex)*1000;keepRest();tickRest()}
+  flash();const cu=W&&W.items[W.cur];toast(it.ex.name+' 타이머가 그사이 끝나서 기록해 뒀어요'+(V==='run'&&cu&&cu!==it?' · 다음 운동 '+cu.ex.name:''));return}
+ W=w;w.cur=i;save();go('run');stopRest();openTimer(o)}
+$('ovcancel').addEventListener('click',closeTimer);
+$('ovdone').addEventListener('click',()=>{if(!T)return;if(T.phase==='count'){closeTimer();return}const t=(Date.now()-T.start)/1000;if(T.mode==='hold')finishT(t);else if(T.mode==='emom')finishT(Math.floor(t/60));else finishT()});
+
+/* ---------- 시작 ---------- */
+function rollDay(){if(V==='home'&&!kp&&!T)renderHome()}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;rollDay();if(restIv||T)lock();if(flashDue&&Date.now()-flashDue<60000)flash();flashDue=0});addEventListener('focus',rollDay);setInterval(rollDay,60000);
+go('home');loadClips();resumeRest();resumeTimer();
+/* 홈 화면 앱: https(배포한 주소)에서만 서비스 워커를 등록해 인터넷 없이도 열리게 함. 로컬 파일·http 테스트에는 영향 없음 */
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+
+</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script type="module">
+/* 3D 마네킹 뷰어: Codex가 만든 관절 구조와 포즈 데이터를 그대로 사용. three.js는 처음 열 때만 불러옴 */
+const POSES=[{"name":"비스트 홀드","en":"BEAST HOLD","desc":"등을 평평하게, 무릎은 바닥에서 약 3cm 띄웁니다.","position":[0,0.64,0],"rotations":{"pelvis":[88,0,0],"LShoulder":[130.3,17.4,161.1],"LElbow":[88.1,0,0],"LHand":[126.2,-25.0,175.0],"LHip":[-113.7,2.2,4.8],"LKnee":[89.4,0,0],"LFoot":[-63.8,-4.1,-3.4],"RShoulder":[130.3,-17.4,-161.1],"RElbow":[88.1,0,0],"RHand":[126.2,25.0,-175.0],"RHip":[-113.7,-2.2,-4.8],"RKnee":[89.4,0,0],"RFoot":[-63.8,4.1,3.4]},"active":[]},{"name":"비스트 리치스루","en":"BEAST REACH THROUGH","desc":"오른팔을 왼쪽 겨드랑이 아래로 뻗으며 몸통을 회전합니다.","position":[0,0.65,0],"rotations":{"pelvis":[88,0,-16],"spine":[0,-22,0],"LShoulder":[135.5,20.4,142.0],"LElbow":[100.9,0,0],"LHand":[107.7,-23.3,-177.2],"LHip":[-119.2,-13.2,-0.7],"LKnee":[90.0,0,0],"LFoot":[-59.9,-4.3,-5.6],"RShoulder":[69.7,-25.5,112.1],"RElbow":[19.9,0,0],"RHand":[-170.9,40.3,127.6],"RHip":[-108.0,-18.2,-8.4],"RKnee":[83.8,0,0],"RFoot":[-64.9,4.0,2.4]},"active":["RArm"]},{"name":"크랩 홀드","en":"CRAB HOLD","desc":"손은 엉덩이 뒤에, 발바닥은 바닥에 두고 골반을 띄웁니다.","position":[0,0.48,0],"rotations":{"pelvis":[-48,0,0],"LShoulder":[1.1,54.0,50.1],"LElbow":[44.2,0,0],"LHand":[-38.1,-66.2,-21.2],"LHip":[-47.0,1.7,8.9],"LKnee":[76.6,0,0],"LFoot":[18.5,-8.7,2.4],"RShoulder":[1.1,-54.0,-50.1],"RElbow":[44.2,0,0],"RHand":[-38.1,66.2,21.2],"RHip":[-47.0,-1.7,-8.9],"RKnee":[76.6,0,0],"RFoot":[18.5,8.7,-2.4]},"active":[]},{"name":"크랩 리치","en":"CRAB REACH","desc":"골반을 높이 밀어 올리고 오른팔을 왼쪽 위로 길게 뻗습니다.","position":[0,0.72,0],"rotations":{"pelvis":[-65,0,-12],"spine":[0,0,-12],"LShoulder":[-46.8,76.4,117.4],"LElbow":[21.3,0,0],"LHand":[-32.0,-73.2,-13.8],"LHip":[1.8,3.2,20.4],"LKnee":[48.7,0,0],"LFoot":[13.6,-8.7,-1.4],"RShoulder":[107.3,-11.3,144.8],"RElbow":[5.6,0,0],"RHand":[49.0,-1.5,-137.7],"RHip":[14.3,-1.6,6.7],"RKnee":[22.1,0,0],"RFoot":[29.0,6.7,-0.4]},"active":["RArm"]},{"name":"트래블링 비스트","en":"TRAVELING BEAST","desc":"오른손과 왼발을 함께 앞으로 옮기는 순간입니다.","position":[0,0.65,0.04],"rotations":{"pelvis":[88,0,0],"LShoulder":[133.5,17.1,161.7],"LElbow":[87.0,0,0],"LHand":[131.1,-24.6,176.8],"LHip":[-139.3,-2.7,5.5],"LKnee":[92.9,0,0],"LFoot":[-41.6,-2.6,-5.6],"RShoulder":[103.7,-18.7,-164.6],"RElbow":[72.3,0,0],"RHand":[114.6,20.9,-167.7],"RHip":[-108.4,-2.6,-4.8],"RKnee":[84.8,0,0],"RFoot":[-64.7,4.1,3.6]},"active":["RArm","LLeg"]},{"name":"사이드 킥스루","en":"SIDE KICK THROUGH","desc":"왼다리를 몸 아래로 통과시켜 오른쪽으로 뻗습니다.","position":[0,0.48,0],"rotations":{"pelvis":[52,0,65],"LShoulder":[138.7,-5.6,-167.2],"LElbow":[7.9,0,0],"LHand":[171.4,-41.5,145.6],"LHip":[16.8,32.0,-136.9],"LKnee":[7.8,0,0],"LFoot":[1.3,-36.3,57.6],"RShoulder":[160.8,-75.0,64.8],"RElbow":[99.4,0,0],"RHand":[104.7,-17.9,7.4],"RHip":[-52.2,73.9,-67.1],"RKnee":[122.1,0,0],"RFoot":[-92.3,5.7,34.0]},"active":["RArm","LLeg"]},{"name":"스콜피온 리치","en":"SCORPION REACH","desc":"오른무릎을 굽혀 뒤쪽 왼편으로 넘기며 몸통을 비틉니다.","position":[0,0.7,0],"rotations":{"pelvis":[88,0,-13],"spine":[0,-14,0],"LShoulder":[129.2,24.8,150.5],"LElbow":[86.4,0,0],"LHand":[119.7,-23.5,-178.1],"LHip":[-114.3,-10.2,0.7],"LKnee":[80.1,0,0],"LFoot":[-54.5,-4.2,-4.7],"RShoulder":[119.0,-13.7,-176.0],"RElbow":[55.2,0,0],"RHand":[148.8,26.2,-167.3],"RHip":[-48.3,-12.5,109.1],"RKnee":[77.8,0,0],"RFoot":[-66.9,37.3,-103.2]},"active":["RLeg"]},{"name":"트래블링 에이프","en":"TRAVELING APE","desc":"깊은 스쿼트에서 양손을 왼쪽에 짚고 옆으로 이동합니다.","position":[0,0.45,0],"rotations":{"pelvis":[43,0,-22],"LShoulder":[155.0,14.5,139.6],"LElbow":[61.0,0,0],"LHand":[131.3,-9.2,161.1],"LHip":[-116.6,-56.6,0.8],"LKnee":[128.2,0,0],"LFoot":[-58.3,2.6,-37.9],"RShoulder":[118.8,-24.3,155.9],"RElbow":[7.9,0,0],"RHand":[167.4,43.7,176.0],"RHip":[-93.0,-0.0,-11.9],"RKnee":[120.0,0,0],"RFoot":[-66.6,-5.3,23.8]},"active":["LArm","RArm","LLeg","RLeg"]},{"name":"언더스위치","en":"UNDERSWITCH","desc":"오른손을 들고 왼다리를 통과시켜 크랩으로 전환합니다.","position":[0,0.49,0],"rotations":{"pelvis":[32,0,95],"LShoulder":[142.4,-2.2,-143.4],"LElbow":[7.9,0,0],"LHand":[159.8,-47.2,128.2],"LHip":[57.2,6.8,-158.8],"LKnee":[32.4,0,0],"LFoot":[8.0,-43.1,59.8],"RShoulder":[-124.5,-4.9,101.9],"RElbow":[21.6,0,0],"RHand":[127.8,-49.3,-26.3],"RHip":[17.2,43.8,-155.1],"RKnee":[104.7,0,0],"RFoot":[-89.1,4.8,49.8]},"active":["RArm","LLeg"]},{"name":"프론트 스텝","en":"FRONT STEP","desc":"오른발을 오른손 바깥에 크게 내딛어 깊은 런지를 만듭니다.","position":[0,0.62,0],"rotations":{"pelvis":[65,0,0],"LShoulder":[129.2,24.4,170.1],"LElbow":[40.8,0,0],"LHand":[150.3,-25.9,175.8],"LHip":[-42.2,4.8,4.6],"LKnee":[48.5,0,0],"LFoot":[-71.7,-2.6,-6.1],"RShoulder":[128.6,-25.5,-171.4],"RElbow":[40.8,0,0],"RHand":[150.2,26.6,-177.1],"RHip":[-95.5,52.8,-25.9],"RKnee":[7.8,0,0],"RFoot":[47.6,-23.3,53.7]},"active":["RLeg"]}];
+const $=id=>document.getElementById(id);
+let T=null,OC=null,S=null;
+/* 두 모듈을 함께 받아야 둘 중 하나만 실패했을 때 반쯤 열린 상태로 남지 않음 */
+async function ensure(){if(!T){const [m,a]=await Promise.all([import('three'),import('three/addons/controls/OrbitControls.js')]);OC=a.OrbitControls;T=m}}
+function build(){
+ const stage=$('v3-stage'),scene=new T.Scene();
+ const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;stage.prepend(renderer.domElement);
+ const camera=new T.PerspectiveCamera(38,1,.1,50),controls=new OC(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=2.3;controls.maxDistance=9;controls.maxPolarAngle=Math.PI/2-.015;controls.target.set(0,.65,0);camera.position.set(3,2.3,3);
+ scene.add(new T.HemisphereLight(0xffffff,0xa9b3a1,2.4));const light=new T.DirectionalLight(0xfff8ed,3);light.position.set(3,7,4);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-4,right:4,top:4,bottom:-4});light.shadow.normalBias=.025;scene.add(light);
+ const floorMat=new T.MeshStandardMaterial({color:0xe1e3dc,roughness:1});const floor=new T.Mesh(new T.PlaneGeometry(200,200),floorMat);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+ const grid=new T.GridHelper(8,32,0xc6cbc1,0xd5d9d0);grid.position.y=.001;grid.material.transparent=true;grid.material.opacity=.35;scene.add(grid);
+ const joints={},limbs={},white=new T.MeshStandardMaterial({color:0xfaf9f2,roughness:.8}),orange=new T.MeshStandardMaterial({color:0xf2a046,roughness:.65});
+ function mesh(g,m,parent,pos=[0,0,0]){const o=new T.Mesh(g,m);o.position.fromArray(pos);o.castShadow=true;o.receiveShadow=true;parent.add(o);o.add(new T.LineSegments(new T.EdgesGeometry(g,25),new T.LineBasicMaterial({color:0x252c29})));return o}
+ function joint(name,parent,pos,r=.055){const g=new T.Group();g.position.fromArray(pos);parent.add(g);joints[name]=g;if(r)mesh(new T.SphereGeometry(r,12,8),orange,g);return g}
+ const root=joint('pelvis',scene,[0,0,0],0);mesh(new T.BoxGeometry(.34,.22,.24),white,root);const spine=joint('spine',root,[0,.15,0],.045),chest=joint('chest',spine,[0,.27,0],0);
+ const torso=new T.CylinderGeometry(.28,.19,.37,4,1);torso.rotateY(Math.PI/4);torso.scale(1,1,.65);mesh(torso,white,chest,[0,-.04,0]);const neck=joint('neck',chest,[0,.22,0],.055);const head=joint('head',neck,[0,.17,0],0);mesh(new T.BoxGeometry(.23,.25,.23),white,head);mesh(new T.BoxGeometry(.12,.022,.012),new T.MeshStandardMaterial({color:0x55635a}),head,[0,.025,.12]);
+ for(const side of ['L','R']){const s=side==='L'?1:-1;for(const type of ['Arm','Leg']){const arm=type==='Arm',a=.43,b=arm?.41:.43;const top=joint(side+(arm?'Shoulder':'Hip'),arm?chest:root,[s*(arm?.285:.17),arm?.10:-.07,0],arm?.065:.07);const mid=joint(side+(arm?'Elbow':'Knee'),top,[0,-a,0],.053);const end=joint(side+(arm?'Wrist':'Ankle'),mid,[0,-b,0],.043);const mat=white.clone();limbs[side+type]=[];for(const [p,len,r] of [[top,a,arm?.065:.085],[mid,b,arm?.05:.063]])limbs[side+type].push(mesh(new T.CylinderGeometry(r,r*.72,len-.05,10),mat,p,[0,-len/2,0]));const pad=joint(side+(arm?'Hand':'Foot'),end,[0,0,0],0);limbs[side+type].push(mesh(new T.BoxGeometry(arm?.14:.15,.06,arm?.19:.25),mat,pad,[0,-.03,arm?.025:.065]))}}
+ S={stage,scene,renderer,camera,controls,joints,limbs,root,floorMat,grid,list:[],idx:0,auto:true,last:0,tr:null,raf:0};
+ new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(S)S.dirty=true}).observe(stage);
+}
+function theme(){S.dirty=true;const bg=getComputedStyle($('v3-stage')).backgroundColor;S.scene.background=new T.Color(bg);const c=S.scene.background,lum=.2126*c.r+.7152*c.g+.0722*c.b;S.floorMat.color.set(lum<.35?0x2a2f33:0xe1e3dc);S.grid.material.opacity=lum<.35?.15:.35}
+const rad=v=>v.map(T.MathUtils.degToRad);
+function target(p,k){return p.rotations[k]||[0,0,0]}
+function apply(p){S.root.position.fromArray(p.position);for(const k in S.joints)S.joints[k].rotation.set(...rad(target(p,k)))}
+function show(i,instant){S.dirty=true;S.idx=(i+S.list.length)%S.list.length;const p=S.list[S.idx];
+ S.tr={start:performance.now(),pos:S.root.position.clone(),q:Object.fromEntries(Object.entries(S.joints).map(([k,v])=>[k,v.quaternion.clone()]))};if(instant){apply(p);S.tr=null}
+ for(const [key,parts] of Object.entries(S.limbs))for(const part of parts)part.material.color.set(p.active.includes(key)?0xee8976:0xfaf9f2);
+ $('v3-count').textContent=String(S.idx+1).padStart(2,'0')+' / '+String(S.list.length).padStart(2,'0')+' · '+p.en;$('v3-name').textContent=p.name;$('v3-desc').textContent=p.desc;S.last=performance.now()}
+function frame(now){S.raf=requestAnimationFrame(frame);if(S.auto&&now-S.last>=2200)show(S.idx+1);const moving=!!S.tr;
+ if(S.tr){const t=Math.min(1,(now-S.tr.start)/600),e=t*t*(3-2*t),p=S.list[S.idx];S.root.position.lerpVectors(S.tr.pos,new T.Vector3(...p.position),e);
+  for(const k in S.joints){const q=new T.Quaternion().setFromEuler(new T.Euler(...rad(target(p,k))));S.joints[k].quaternion.slerpQuaternions(S.tr.q[k],q,e)}if(t===1){apply(p);S.tr=null}}
+ /* 멈춰 있고 아무것도 안 움직이면 다시 그리지 않음 (배터리) */
+ if(S.controls.update()||moving||S.dirty){S.renderer.render(S.scene,S.camera);S.dirty=false}}
+function view(v){S.dirty=true;S.camera.position.fromArray(v==='side'?[3.8,1.7,0]:v==='front'?[0,1.8,4.2]:[3,2.3,3]);S.controls.target.set(0,.65,0);S.controls.update();document.querySelectorAll('[data-v3view]').forEach(b=>b.classList.toggle('on',b.dataset.v3view===v))}
+function setAuto(a){S.auto=a;S.last=performance.now();$('v3-play').textContent=a?'Ⅱ 멈춤':'▷ 자동 재생';$('v3-play').classList.toggle('ok',a)}
+window.open3D=async(names,start,title,auto)=>{
+ const ov=$('v3d');ov.hidden=false;document.body.style.overflow='hidden';$('v3-name').textContent=title;$('v3-count').textContent='';$('v3-desc').textContent='';$('v3-msg').hidden=false;$('v3-msg').textContent='3D 모델 불러오는 중…';
+ try{await ensure();if(!S)build()}catch(e){$('v3-msg').textContent='3D 모델을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 다시 열어 주세요.';return}
+ if(ov.hidden)return;$('v3-msg').hidden=true;theme();
+ S.list=names.map(n=>POSES.find(p=>p.name===n)).filter(Boolean);show(start||0,true);view('angle');setAuto(!!auto);
+ cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(frame)};
+function close3D(){$('v3d').hidden=true;document.body.style.overflow='';if(S){cancelAnimationFrame(S.raf);S.raf=0}}
+$('v3-close').addEventListener('click',close3D);
+$('v3-prev').addEventListener('click',()=>{if(S&&S.list.length){setAuto(false);show(S.idx-1)}});
+$('v3-next').addEventListener('click',()=>{if(S&&S.list.length){setAuto(false);show(S.idx+1)}});
+$('v3-play').addEventListener('click',()=>{if(S)setAuto(!S.auto)});
+document.querySelectorAll('[data-v3view]').forEach(b=>b.addEventListener('click',()=>{if(S)view(b.dataset.v3view)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('v3d').hidden)close3D()});
+</script>
+</body>
+</html>
