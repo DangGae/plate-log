@@ -426,6 +426,15 @@ button{touch-action:manipulation}
 /* 글자 크기는 공통 규칙(터치 화면 16px, iOS 확대 방지)을 따름 */
 .exmemo textarea{background:var(--surface)}
 .exmemo .okb{align-self:flex-end;border:1px solid var(--ink);background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 16px;min-height:34px;font-size:13px}
+/* 종목 관리: 줄을 누르면 아래로 펼쳐 이름·고정 안내·영상·삭제 */
+#p-ex .q{width:100%;font-size:15px;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+.xmitem{display:flex;flex-direction:column}
+.xmitem.open .edrow{border-color:var(--ink);border-radius:10px 10px 0 0}
+.xmbox{display:flex;flex-direction:column;gap:10px;border:1px solid var(--ink);border-top:0;border-radius:0 0 10px 10px;padding:10px;background:var(--sunk)}
+.xmbox .form{background:var(--surface)}
+.xmclip{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.xmclip span{font-size:13px;color:var(--muted);min-width:76px}
+.xmclip video,.xmclip img{width:120px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#0E0F10}
 .dupask{display:flex;flex-direction:column;gap:6px;border:1.5px solid var(--accent);border-radius:12px;padding:10px 12px;background:var(--surface)}
 .dupask b{font-size:14px}
 .dupask p{margin:0;font-size:13px;color:var(--muted)}
@@ -470,7 +479,7 @@ button{touch-action:manipulation}
   <section id="v-set" class="view" hidden>
     <div class="panel" id="p-routine"></div>
     <div class="panel" id="p-days"></div>
-    <div class="panel" id="p-custom"></div>
+    <div class="panel" id="p-ex"></div>
     <div class="panel" id="p-merge"></div>
     <div class="panel" id="p-plates"></div>
     <div class="panel" id="p-backup">
@@ -641,9 +650,10 @@ function library(){const seen=new Set(),g=[];
 function nkey(s){return String(s||'').replace(/\s+/g,'').toLowerCase()}
 /* 받침에 맞춰 조사 붙이기: jo('벤치','은','는') → '벤치는'. '으로'는 ㄹ받침 뒤에서도 '로' */
 function jo(w,a,b){w=String(w);const c=w.charCodeAt(w.length-1)-0xAC00,t=c%28;return w+(c>=0&&c<=11171&&t&&!(a==='으로'&&t===8)?a:b)}
-/* 종목 정의(루틴·내가 만든 종목). 목록에서 빠진 종목은 가장 최근 기록에 남은 것 */
-function exDef(id){const d=findDef(id);if(d)return d;let best=null;
- for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id===id&&(!best||wsort(w)>best.k))best={k:wsort(w),ex:it.ex};return best&&best.ex}
+/* 종목 정의: 루틴·내가 만든 종목 → 없으면 가장 최근 기록에 남은 것 → 그래도 없으면 기본 루틴 것
+   (기본 종목 이름을 바꾸고 루틴에서 뺀 뒤에도 바꾼 이름이 보이게 기록을 기본 루틴보다 먼저 봄) */
+function exDef(id){for(const k of rkeys())for(const e of RT()[k].ex)if(e.id===id)return e;for(const e of (db.custom||[]))if(e.id===id)return e;let best=null;
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id===id&&(!best||wsort(w)>best.k))best={k:wsort(w),ex:it.ex};return best?best.ex:findDef(id)}
 function inLibrary(id){return library().some(g=>g.items.some(e=>e.id===id))}
 /* 이름이 같은 다른 종목(목록 먼저, 없으면 기록에서). 새로 만들 때 기존 종목을 쓰라고 묻는 데 씀 */
 function sameName(name,exceptId){const k=nkey(name);if(!k)return null;
@@ -784,7 +794,7 @@ function platesHTML(w,label){const r=plateSplit(w);if(!r)return'';if(r.err)retur
 /* ---------- 화면 전환 ---------- */
 let V='home';
 const MAIN=['home','record','stats','set'];
-function go(v){closeKp();closeMemo();detExMemo=null;dupNx=null;edDup=null;mgArm=false;V=v;
+function go(v){closeKp();closeMemo();detExMemo=null;dupNx=null;edDup=null;mgArm=false;xmDel=xmClipDel=null;vidAsk=null;V=v;
  /* 화면을 옮기면 '정말 삭제' 같은 확인 대기와 운동 준비의 열린 편집 상태를 풀어서, 다음에 한 번 눌러 지워지는 일이 없게 함 */
  endArm=finDel=detDel=detMemo=undoArm=false;if(v!=='plan'){pDel=null;pickOpen=false;newEx=null;pEdit=null}if(MAIN.includes(v)&&restIv)stopRest();
  for(const x of ['home','plan','run','finish','record','detail','stats','set'])$('v-'+x).hidden=x!==v;
@@ -1191,7 +1201,7 @@ function exHistory(id){const out=[];for(const w of doneWs()){const its=w.items.f
 function statable(){const ids=[];for(const g of library())for(const ex of g.items)if(['weight','reps','hold','emom','flow'].includes(ex.type)&&!ids.includes(ex.id))ids.push(ex.id);
  for(const w of doneWs())for(const it of w.items)if(['weight','reps','hold','emom','flow'].includes(it.ex.type)&&!ids.includes(it.ex.id))ids.push(it.ex.id);
  return ids.filter(id=>exHistory(id).length)}
-function exName(id){const d=findDef(id);if(d)return d.name;for(const w of doneWs())for(const it of w.items)if(it.ex.id===id)return it.ex.name;return id}
+function exName(id){const d=exDef(id);return d?d.name:id}
 function renderStats(){render100();const ids=statable(),pk=$('picker'),box=$('chartbox');
  if(!ids.length){pk.innerHTML='';box.innerHTML='<div class="empty">무게나 횟수를 기록하면 종목별 그래프가 생겨요.</div>';return}
  if(!ids.includes(statEx))statEx=ids[0];pk.innerHTML=ids.map(id=>`<button class="${id===statEx?'on':''}" data-sx="${id}">${esc(exName(id))}</button>`).join('');drawChart()}
@@ -1250,9 +1260,11 @@ $('p100').addEventListener('click',e=>{const id=e.target.id,el=$('p100');
  else if(id==='c-copy'){copyText(el._summary,$('c-msg'),null)}});
 
 /* ---------- 설정 ---------- */
-let edR=null,edIdx=null,delArm=null,resetArm=false,rDelArm=false,draft=null,cuDel=null,edDup=null;
+let edR=null,edIdx=null,delArm=null,resetArm=false,rDelArm=false,draft=null,edDup=null;
 function renderSet(){const R=RT();if(!edR||!R[edR])edR=rkeys()[0];const r=R[edR];
  let h=`<h3>루틴 편집</h3><div class="chips" role="group">${rkeys().map(k=>`<button class="${k===edR?'on':''}" data-er="${k}">${esc(R[k].name)}</button>`).join('')}<button data-er="__new">+ 새 루틴</button></div>`;
+ /* 루틴에서 빼서 어디에도 없게 된 종목에 영상이 남았으면 지울지 물음 */
+ if(vidAsk)h+=`<div class="dupask" role="alert"><b>${vidAsk.map(x=>esc(x.d.name)).join(', ')}: 이제 어느 루틴·목록에도 없어요</b><p>동작 영상이 남아 있어요. 영상도 지울까요? 지난 기록은 그대로 남아요.</p><div class="row"><button class="ghost sm danger" data-va="del">영상 지우기</button><button class="ghost sm" data-va="keep">남겨 두기</button></div></div>`;
  if(r){h+=`<div class="form" style="background:none;padding:0"><label>루틴 이름<input id="ed-rname" value="${esc(r.name)}"></label><label>설명<input id="ed-rsub" value="${esc(r.sub||'')}"></label><label class="w2">색<div class="cgrid">${COLORS.map(c=>`<button class="${rcolor(edR)===c?'on':''}" data-rc="${c}" style="--c:var(--${c})" aria-label="${c}"></button>`).join('')}</div></label></div>
  <div class="edlist">${r.ex.map((ex,i)=>edIdx===i?exForm(draft||ex,'ed',{type:ex.type!=='flow'}):`<div class="edrow"><div><b>${esc(ex.name)}</b><small>${TYPES[ex.type]} · ${exSummary(ex)}</small></div><div class="acts"><button data-ed="up" data-i="${i}" aria-label="위로"${i===0?' disabled':''}>↑</button><button data-ed="down" data-i="${i}" aria-label="아래로"${i===r.ex.length-1?' disabled':''}>↓</button><button data-ed="edit" data-i="${i}" aria-label="수정">✎</button><button data-ed="del" data-i="${i}" aria-label="삭제" style="${delArm===i?'background:var(--red);color:#fff;border-color:var(--red)':''}">${delArm===i?'확인':'✕'}</button></div></div>`).join('')}${edIdx===r.ex.length?exForm(draft,'ed',{type:true})+(edDup?dupBox(edDup):''):''}${!r.ex.length&&edIdx==null?'<div class="empty2">아직 종목이 없어요. 아래에서 추가하세요.</div>':''}</div>
  <div class="row"><button class="ghost sm" data-ed="add">+ 종목 추가</button><button class="ghost sm" data-ed="lib">목록에서 고르기</button><button class="ghost sm${rDelArm?' danger':''}" data-ed="rdel">${rDelArm?'정말 루틴 삭제':'루틴 삭제'}</button></div>
@@ -1261,8 +1273,7 @@ function renderSet(){const R=RT();if(!edR||!R[edR])edR=rkeys()[0];const r=R[edR]
  $('p-routine').innerHTML=h;
  const map=DMAP();
  $('p-days').innerHTML=`<h3>요일별 추천 루틴</h3><p>홈의 '오늘의 추천'에 보여 줄 루틴이에요. 운동은 언제든 다른 루틴으로 시작할 수 있어요.</p><div class="dmap">${ORDER.map(d=>`<label>${DAYS[d]}<select id="dm-${d}" data-dm="${d}"><option value="X"${map[d]==='X'?' selected':''}>휴식</option>${rkeys().map(k=>`<option value="${k}"${map[d]===k?' selected':''}>${esc(R[k].name)}</option>`).join('')}</select></label>`).join('')}</div>`;
- const cu=db.custom||[];
- $('p-custom').innerHTML=`<h3>내가 만든 종목</h3>${cu.length?'<div class="edlist">'+cu.map(e=>`<div class="edrow"><div><b>${esc(e.name)}</b><small>${TYPES[e.type]} · ${exSummary(e)}</small></div><div class="acts"><button data-cud="${e.id}" aria-label="삭제" style="${cuDel===e.id?'background:var(--red);color:#fff;border-color:var(--red)':''}">${cuDel===e.id?'확인':'✕'}</button></div></div>`).join('')+'</div>':'<p>운동 준비 화면에서 \'새 종목 만들기\'로 만든 종목이 여기에 모여요.</p>'}`;
+ renderEx();
  const bw=barW(),pa=platesAvail();
  $('p-plates').innerHTML=`<h3>원판 설정</h3><p>바벨 종목을 입력할 때 한쪽에 끼울 원판을 계산해요.</p><div class="form" style="background:none;padding:0"><label>빈 봉 무게(kg)<input id="pl-bar" type="number" inputmode="decimal" step="any" value="${bw}"></label></div><div class="chips" role="group" aria-label="가진 원판">${ALL_PLATES.map(p=>`<button class="${pa.includes(p)?'on':''}" data-pl="${p}" aria-pressed="${pa.includes(p)}">${fmtN(p)}kg</button>`).join('')}</div>`;
  renderMerge();
@@ -1274,9 +1285,11 @@ $('v-set').addEventListener('change',e=>{const t=e.target;if(t.id!=='ed-type')ke
  else if(t.dataset.dm!=null){ensureEditable();db.dayMap[t.dataset.dm]=t.value;save()}
  else if(t.id==='ed-rname'||t.id==='ed-rsub'){ensureEditable();const k=t.id==='ed-rname'?'name':'sub';db.routines[edR][k]=t.value.trim()||(k==='sub'?'':db.routines[edR][k]);save();renderSet()}
  else if(t.id==='pl-bar'){const v=num(t.value);if(v>=0){settings().bar=v;save();renderSet()}}});
-$('v-set').addEventListener('click',e=>{const b=e.target.closest('[data-er],[data-ed],[data-pl],[data-rc],[data-fs],[data-fc],[data-libadd],[data-cud],[data-dup]');if(!b)return;if(!b.dataset.fs&&!b.dataset.fc)keepDraft();
- if(b.dataset.cud){if(cuDel!==b.dataset.cud){cuDel=b.dataset.cud;renderSet();return}db.custom=(db.custom||[]).filter(x=>x.id!==cuDel);cuDel=null;save();renderSet();return}
- cuDel=null;
+$('v-set').addEventListener('click',e=>{const b=e.target.closest('[data-er],[data-ed],[data-pl],[data-rc],[data-fs],[data-fc],[data-libadd],[data-dup],[data-va]');if(!b)return;if(!b.dataset.fs&&!b.dataset.fc)keepDraft();
+ if(b.dataset.va){const L=vidAsk||[];vidAsk=null;
+  if(b.dataset.va==='del'){Promise.all(L.flatMap(x=>clipKeysOf(x.id).map(delClip))).then(()=>{toast('영상을 지웠어요');renderSet()});return}
+  /* 기록도 없는 종목은 영상을 볼 곳이 없어지므로 '내가 만든 종목'으로 남김 */
+  for(const x of L)if(!recCount(x.id)&&!inLibrary(x.id))(db.custom=db.custom||[]).push(x.d);save();toast('영상을 남겨 뒀어요 · 설정 → 종목 관리에서 볼 수 있어요');renderSet();return}
  if(b.dataset.er){if(b.dataset.er==='__new'){ensureEditable();const k='r'+Date.now().toString(36);db.routines[k]={name:'새 루틴',sub:'',color:COLORS[rkeys().length%4],ex:[]};save();edR=k}else edR=b.dataset.er;edIdx=null;draft=null;delArm=null;rDelArm=false;renderSet();return}
  if(b.dataset.pl){const p=+b.dataset.pl,st=settings();let pa=platesAvail().slice();pa=pa.includes(p)?pa.filter(x=>x!==p):pa.concat(p);st.plates=pa.sort((a,c)=>c-a);save();renderSet();return}
  if(b.dataset.rc){ensureEditable();db.routines[edR].color=b.dataset.rc;save();renderSet();return}
@@ -1296,9 +1309,72 @@ $('v-set').addEventListener('click',e=>{const b=e.target.closest('[data-er],[dat
  else if(a==='lib'){edIdx='lib';renderSet()}
  else if(a==='libclose'){edIdx=null;renderSet()}
  else if(a==='up'||a==='down'){ensureEditable();const list=db.routines[edR].ex,j=a==='up'?i-1:i+1;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];if(edIdx===i)edIdx=j;else if(edIdx===j)edIdx=i;save();renderSet()}
- else if(a==='del'){if(delArm!==i){delArm=i;renderSet();return}ensureEditable();db.routines[edR].ex.splice(i,1);delArm=null;edIdx=null;save();renderSet()}
- else if(a==='rdel'){if(!rDelArm){rDelArm=true;renderSet();return}ensureEditable();if(rkeys().length<=1){toast('루틴은 하나 이상 있어야 해요');rDelArm=false;return}delete db.routines[edR];for(const d in db.dayMap)if(db.dayMap[d]===edR)db.dayMap[d]='X';rDelArm=false;edR=null;save();renderSet()}
- else if(a==='reset'){if(!resetArm){resetArm=true;renderSet();return}delete db.routines;delete db.dayMap;resetArm=false;edIdx=null;edR=null;save();renderSet()}});
+ else if(a==='del'){if(delArm!==i){delArm=i;renderSet();return}const before=libMap();ensureEditable();db.routines[edR].ex.splice(i,1);delArm=null;edIdx=null;save();askOrphans(before);renderSet()}
+ else if(a==='rdel'){if(!rDelArm){rDelArm=true;renderSet();return}ensureEditable();if(rkeys().length<=1){toast('루틴은 하나 이상 있어야 해요');rDelArm=false;return}const before=libMap();delete db.routines[edR];for(const d in db.dayMap)if(db.dayMap[d]===edR)db.dayMap[d]='X';rDelArm=false;edR=null;save();askOrphans(before);renderSet()}
+ else if(a==='reset'){if(!resetArm){resetArm=true;renderSet();return}const before=libMap();delete db.routines;delete db.dayMap;resetArm=false;edIdx=null;edR=null;save();askOrphans(before);renderSet()}});
+
+/* ---------- 종목 관리 ---------- */
+/* 모든 종목(루틴·내가 만든 종목·기록에만 남은 종목)을 한곳에서: 이름·고정 안내·증량 단위·바벨·좌우, 동작 영상, 합치기, 삭제.
+   세트·횟수·휴식은 루틴마다 다르게 둘 수 있어서 여기서는 바꾸지 않음. 영상은 종목(id)에 붙음(애니멀플로우는 루틴 A/B 따로) */
+let xmQ='',xmOpen=null,xmDel=null,xmClipDel=null,vidAsk=null;
+function clipKeysOf(id){return [id,id+':A',id+':B'].filter(k=>clipURL[k])}
+function libMap(){const m=new Map();for(const g of library())for(const e of g.items)if(!m.has(e.id))m.set(e.id,e);return m}
+/* 루틴에서 빼거나 루틴을 지운 뒤: 어디에도 없게 된 종목 중 영상이 남은 것을 물어볼 목록에 올림 */
+function askOrphans(before){const after=libMap(),L=[];for(const [id,d] of before)if(!after.has(id)&&clipKeysOf(id).length)L.push({id,d:clone(d)});vidAsk=L.length?L:null}
+function exWhere(id){const w=rkeys().filter(k=>RT()[k].ex.some(e=>e.id===id)).map(k=>RT()[k].name);if((db.custom||[]).some(e=>e.id===id))w.push('내가 만든 종목');return w}
+function exList(){const ids=[...libMap().keys()];for(const w of Object.values(db.workouts))for(const it of w.items)if(!ids.includes(it.ex.id))ids.push(it.ex.id);
+ const L=ids.map(id=>({id,d:exDef(id),n:recCount(id),where:exWhere(id),clip:clipKeysOf(id).length>0})).filter(x=>x.d);
+ /* 이 기능 전에 지운 종목에 남은 영상도 보여서 지울 수 있게 함 */
+ for(const k of Object.keys(clipURL)){const id=k.replace(/:[AB]$/,'');if(!L.some(x=>x.id===id))L.push({id,d:exDef(id),n:0,where:[],clip:true,orphan:true})}
+ return L.sort((a,b)=>(!!a.orphan-!!b.orphan)||(a.d?a.d.name:'').localeCompare(b.d?b.d.name:'','ko'))}
+function xmVisible(){const q=nkey(xmQ);return exList().filter(x=>!q||nkey(x.d?x.d.name:'').includes(q))}
+function renderEx(){$('p-ex').innerHTML=`<h3>종목 관리</h3><p>모든 종목의 이름·고정 안내·동작 영상을 여기서 바꿔요. 세트·횟수·휴식은 루틴마다 달라서 루틴 편집이나 운동 화면에서 바꿔요.</p>
+ <input class="q" id="xm-q" type="search" placeholder="종목 이름 검색" value="${esc(xmQ)}" aria-label="종목 검색"><div class="edlist" id="xm-list">${xmRows(xmVisible())}</div>`}
+function xmRows(L){if(!L.length)return '<p class="note">찾는 종목이 없어요.</p>';
+ return L.map(x=>{const op=xmOpen===x.id,nm=x.d?x.d.name:'지운 종목의 영상',sub=x.d&&!x.orphan?`${TYPES[x.d.type]} · ${x.where.length?x.where.join(', '):'기록에만 있음'} · 기록 ${x.n}회${x.clip?' · 영상 있음':''}`:'어느 목록에도 없는 종목의 영상';
+  return `<div class="xmitem${op?' open':''}"><div class="edrow"><div><b>${esc(nm)}</b><small>${esc(sub)}</small></div><div class="acts"><button data-xm="open" data-id="${x.id}" aria-expanded="${op}" aria-label="${esc(nm)} ${op?'접기':'관리'}">${op?'▴':'✎'}</button></div></div>${op?xmBox(x):''}</div>`}).join('')}
+function xmBox(x){const d=x.orphan?null:x.d,id=x.id;let h='<div class="xmbox">';
+ if(d){const t=d.type,f=(k,lab,val,type)=>`<label class="${type==='text'?'w2':''}">${lab}<input id="xm-${k}" type="${type}"${type==='number'?' inputmode="decimal" step="any"':''} value="${esc(val??'')}"></label>`;
+  h+=`<div class="form">${f('name','종목 이름',d.name,'text')}${f('note','고정 안내 (선택 · 매번 보여요)',d.note||'','text')}`
+   +(t==='weight'?f('inc','증량 단위(kg)',d.inc??2.5,'number')+`<label class="cb"><input type="checkbox" id="xm-bar"${d.bar?' checked':''}>바벨 (원판 표시)</label>`:'')
+   +(['weight','reps','hold'].includes(t)?`<label class="cb"><input type="checkbox" id="xm-sides"${d.sides?' checked':''}>좌우 따로 기록</label>`:'')
+   +`<div class="row w2" style="grid-column:span 2"><button class="ghost sm ok" data-xm="save" data-id="${id}">저장</button></div></div><p>이름을 바꾸면 모든 루틴과 지난 기록에서 함께 바뀌어요.</p>`}
+ const keys=d?(d.type==='flow'?[id+':A',id+':B']:[id]):clipKeysOf(id);
+ h+=keys.map(k=>{const lb=k.endsWith(':A')?'루틴 A 영상':k.endsWith(':B')?'루틴 B 영상':'동작 영상',u=clipURL[k],img=u&&(clipType[k]||'').startsWith('image');
+  return `<div class="xmclip"><span>${lb}</span>${u?(img?`<img src="${u}" alt="">`:`<video src="${u}" muted loop autoplay playsinline aria-label="${lb}"></video>`)
+   +(d?`<button class="ghost sm" data-xm="clip" data-ck="${k}">바꾸기</button>`:'')+`<button class="ghost sm${xmClipDel===k?' danger':''}" data-xm="clipdel" data-ck="${k}">${xmClipDel===k?'정말 영상 삭제':'영상 삭제'}</button>`
+   :`<button class="ghost sm" data-xm="clip" data-ck="${k}">+ 영상 넣기</button>`}</div>`}).join('');
+ if(d){h+=`<div class="row">${x.where.length?`<button class="ghost sm${xmDel===id?' danger':''}" data-xm="del" data-id="${id}">종목 삭제</button>`:`<button class="ghost sm" data-xm="relist" data-id="${id}">목록에 다시 넣기</button>`}${d.type!=='flow'?`<button class="ghost sm" data-xm="merge" data-id="${id}">다른 종목과 합치기</button>`:''}</div>`;
+  if(xmDel===id){const btn=(v,lb,cls)=>`<button class="ghost sm${cls}" data-xm="delgo" data-v="${v}" data-id="${id}">${lb}</button>`;
+   h+=`<div class="dupask" role="alert"><b>${esc(jo(d.name,'을','를'))} ${esc(x.where.join(', '))}에서 빼요</b><p>${x.n?`지난 기록 ${x.n}회는 그대로 남고, 종목 관리에는 '기록에만 있음'으로 남아요.`:'기록이 없어서 종목 관리에서도 사라져요.'}</p><div class="row">`
+    +(x.clip?(x.n?btn(1,'영상도 같이 삭제',' danger')+btn(0,'종목만 삭제',''):btn(1,'종목과 영상 삭제',' danger')):btn(0,'정말 삭제',' danger'))+`<button class="ghost sm" data-xm="delno">취소</button></div></div>`}}
+ return h+'</div>'}
+/* 이름·고정 안내·증량·바벨·좌우를 모든 루틴과 '내가 만든 종목'에 적용. 지난 기록은 이름만, 아직 안 끝난 운동은 고정 안내·증량·바벨까지(좌우는 세트 수가 바뀌어 다음 운동부터) */
+function saveXm(id){const d=exDef(id);if(!d)return;const g=k=>{const el=$('xm-'+k);return el?el.value:undefined},c=k=>{const el=$('xm-'+k);return el?el.checked:undefined};
+ const pn=d.name,name=(g('name')||'').trim()||pn,note=(g('note')||'').trim(),incV=g('inc'),inc=incV===undefined?undefined:(num(incV)>0?num(incV):2.5),bar=c('bar'),sides=c('sides');
+ const patch=(e,full)=>{e.name=name;if(note)e.note=note;else delete e.note;if(inc!==undefined)e.inc=inc;if(bar!==undefined){if(bar)e.bar=true;else delete e.bar}if(full&&sides!==undefined){if(sides)e.sides=true;else delete e.sides}};
+ if(rkeys().some(k=>RT()[k].ex.some(e=>e.id===id)))ensureEditable();
+ for(const k in (db.routines||{}))for(const e of db.routines[k].ex)if(e.id===id)patch(e,true);
+ for(const e of (db.custom||[]))if(e.id===id)patch(e,true);
+ for(const w of Object.values(db.workouts))for(const it of w.items)if(it.ex.id===id){if(w.status==='done')it.ex.name=name;else patch(it.ex,false)}
+ save();xmOpen=null;renderSet();toast(name+' 저장했어요');if(nkey(pn)!==nkey(name)&&sameName(name,id))setTimeout(()=>toast(DUP_TIP),1800)}
+async function delExercise(id,withClip){const d=exDef(id),n=recCount(id);if(rkeys().some(k=>RT()[k].ex.some(e=>e.id===id)))ensureEditable();
+ for(const k in (db.routines||{}))db.routines[k].ex=db.routines[k].ex.filter(e=>e.id!==id);db.custom=(db.custom||[]).filter(e=>e.id!==id);
+ const st=settings();for(const k of ['rest','holdMax'])if(st[k])delete st[k][id];
+ if(withClip)for(const k of clipKeysOf(id))await delClip(k);
+ xmDel=null;if(!n)xmOpen=null;save();toast((d?d.name:'종목')+' 삭제했어요'+(withClip?' · 영상도 지움':''))}
+$('p-ex').addEventListener('input',e=>{if(e.target.id==='xm-q'){xmQ=e.target.value;$('xm-list').innerHTML=xmRows(xmVisible())}});
+$('p-ex').addEventListener('click',async e=>{const b=e.target.closest('[data-xm]');if(!b)return;const a=b.dataset.xm,id=b.dataset.id,ck=b.dataset.ck;
+ if(a!=='clipdel')xmClipDel=null;if(a!=='del'&&a!=='delgo')xmDel=null;
+ if(a==='open'){xmOpen=xmOpen===id?null:id;renderEx();return}
+ if(a==='save'){saveXm(id);return}
+ if(a==='clip'){clipFor={ck,set:true};const f=$('clipfile');f.value='';f.click();return}
+ if(a==='clipdel'){if(xmClipDel!==ck){xmClipDel=ck;renderEx();return}xmClipDel=null;await delClip(ck);toast('영상을 지웠어요');renderSet();return}
+ if(a==='del'){xmDel=xmDel===id?null:id;renderEx();return}
+ if(a==='delno'){renderEx();return}
+ if(a==='delgo'){await delExercise(id,b.dataset.v==='1');renderSet();return}
+ if(a==='relist'){const d=exDef(id);if(d&&!inLibrary(id)){(db.custom=db.custom||[]).push(clone(d));save();toast(d.name+' 다시 목록에 넣었어요')}renderSet();return}
+ if(a==='merge'){mgFrom=id;mgTo='';mgArm=false;renderMerge();$('p-merge').scrollIntoView({block:'start'})}});
 
 /* ---------- 종목 합치기 ---------- */
 /* 같은 운동을 실수로 두 종목으로 만들었을 때: 없앨 종목(from)의 기록을 남길 종목(to)으로 옮기고 from은 루틴·목록에서 뺌.
@@ -1467,10 +1543,11 @@ async function loadClips(){try{let keys=((await idbDo('readonly',st=>st.getAllKe
  for(const k of keys||[]){const blob=await idbDo('readonly',st=>st.get(k));if(blob){clipURL[k]=URL.createObjectURL(blob);clipType[k]=blob.type||'';clipSize[k]=blob.size}}if((keys||[]).length&&V==='run')renderRun();if(V==='set')paintBk()}catch(e){}}
 async function putClip(id,blob){await idbDo('readwrite',st=>st.put(blob,id));dataRev++;if(clipURL[id])URL.revokeObjectURL(clipURL[id]);clipURL[id]=URL.createObjectURL(blob);clipType[id]=blob.type||'';clipSize[id]=blob.size}
 async function delClip(id){try{await idbDo('readwrite',st=>st.delete(id))}catch(e){}dataRev++;if(clipURL[id])URL.revokeObjectURL(clipURL[id]);delete clipURL[id];delete clipType[id];delete clipSize[id];if(db.settings&&db.settings.clip)delete db.settings.clip[id];save()}
-$('clipfile').addEventListener('change',async e=>{const f=e.target.files[0],cf=clipFor;clipFor=null;if(!f||!cf)return;const it=item(cf.u);
- if(!/^(video|image)\//.test(f.type)&&!/\.(mov|mp4|m4v|gif|webp|png|jpe?g)$/i.test(f.name)){alertCard(cf.u,'영상이나 GIF 파일만 넣을 수 있어요.');return}
- if(f.size>60*1024*1024){alertCard(cf.u,'파일이 너무 커요(60MB 이하). 짧게 잘라서 넣어 주세요.');return}
- try{await putClip(cf.ck,f);setClipView(cf.ck,{open:true,z:1,y:0});if(it)refresh(it)}catch(err){alertCard(cf.u,'저장하지 못했어요. 휴대폰 저장 공간을 확인해 주세요.')}});
+/* 운동 카드(cf.u)나 설정 → 종목 관리(cf.set)에서 고른 영상 */
+$('clipfile').addEventListener('change',async e=>{const f=e.target.files[0],cf=clipFor;clipFor=null;if(!f||!cf)return;const it=cf.u&&item(cf.u),say=m=>cf.u?alertCard(cf.u,m):toast(m);
+ if(!/^(video|image)\//.test(f.type)&&!/\.(mov|mp4|m4v|gif|webp|png|jpe?g)$/i.test(f.name)){say('영상이나 GIF 파일만 넣을 수 있어요.');return}
+ if(f.size>60*1024*1024){say('파일이 너무 커요(60MB 이하). 짧게 잘라서 넣어 주세요.');return}
+ try{await putClip(cf.ck,f);setClipView(cf.ck,{open:true,z:1,y:0});if(it)refresh(it);if(cf.set&&V==='set')renderSet()}catch(err){say('저장하지 못했어요. 휴대폰 저장 공간을 확인해 주세요.')}});
 function alertCard(u,msg){const c=$('card-'+u);if(!c)return;let m=c.querySelector('.clipmsg');if(!m){m=document.createElement('p');m.className='note clipmsg';m.style.color='var(--red)';c.querySelector('.ctl').after(m)}m.textContent=msg}
 
 /* ---------- 소리 · 화면 ---------- */
