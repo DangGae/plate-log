@@ -744,7 +744,7 @@ function memoHas(m){return m&&(m.text||(m.pain||[]).length||m.sleep||m.fatigue)}
 function wcolor(w){return w.routine&&RT()[w.routine]?rcolor(w.routine):'plate5'}
 function lastEntry(id,w){const key=wsort(w);let best=null;
  for(const o of Object.values(db.workouts)){if(o.id===w.id||o.status!=='done')continue;const k=wsort(o);if(k>=key)continue;
-  for(const it of o.items)if(it.ex.id===id&&hasDone(it.en)&&(!best||k>best.k))best={k,date:o.date,en:it.en,t:it.ex.type}}return best}
+  for(const it of o.items)if(it.ex.id===id&&hasDone(it.en)&&(!best||k>best.k))best={k,date:o.date,en:it.en,t:it.ex.type,ex:it.ex}}return best}
 function suggestion(ex,last){if(ex.type!=='weight'||!last||last.t!=='weight'||!last.en.sets)return null;const s=last.en.sets.filter(x=>x.done);if(s.length<nSets(ex))return null;if(s.every(x=>+x.r>=ex.hi)){const w=+s[0].w||0;return +(w+ex.inc).toFixed(2)}return null}
 /* 애니멀플로우 A/B는 요일과 상관없이 지난번과 번갈아 고름 (처음이면 A) */
 function flowDefault(w,last){return(last&&last.en.variant==='A')?'B':'A'}
@@ -946,7 +946,8 @@ function lastText(ex,last){if(!last)return'';const en=last.en;let t;
  if(ex.type==='weight'&&en.sets){const s=en.sets.filter(x=>x.done);const ws=[...new Set(s.map(x=>x.w))];t=ws.length===1?(ws[0]?ws[0]+'kg × ':'')+s.map(x=>x.r||'-').join(' · '):s.map(x=>(x.w||0)+'×'+(x.r||'-')).join(' · ')}
  else if(ex.type==='reps'&&en.sets)t=en.sets.filter(x=>x.done).map(x=>x.r||'-').join(' · ')+'회';
  else if(ex.type==='hold'&&en.sets)t=en.sets.filter(x=>x.done).map(x=>x.s||'-').join(' · ')+'초';
- else if(ex.type==='emom')t=(num(en.w)>0?en.w+'kg · ':'')+en.rounds+'/'+ex.rounds+' 라운드';
+ /* 목표 라운드는 그날 설정 기준 (나중에 5분으로 줄여도 지난번은 10/10으로 보임) */
+ else if(ex.type==='emom')t=(num(en.w)>0?en.w+'kg · ':'')+en.rounds+'/'+((last.ex&&last.ex.rounds)||ex.rounds)+' 라운드';
  else if(ex.type==='flow')t='루틴 '+en.variant+(en.sets?' · '+en.sets.filter(x=>x.done).map(x=>x.r||'-').join(' · ')+'회':'');
  else t='완료';
  return '<p class="last">지난번 '+fmtDate(last.date,true)+' · <b>'+esc(t)+'</b></p>'}
